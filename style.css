@@ -1,5 +1,5 @@
 body {
-    background-color: #1a1a2e;
+    background: radial-gradient(circle, #1a1a2e 0%, #16213e 100%);
     color: white;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
@@ -7,120 +7,108 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    padding: 20px;
+    overflow-x: hidden;
 }
 
-.container {
-    text-align: center;
-    max-width: 400px;
+#game-root {
     width: 100%;
+    max-width: 450px;
+    padding: 20px;
+    text-align: center;
 }
 
-h1 {
-    font-size: 1.5rem;
-    color: #00d2ff;
-    margin-bottom: 20px;
+/* 🎰 የላይኛው ርዕስ */
+h2 {
+    font-size: 2rem;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
+    background: linear-gradient(to bottom, #00f5d4, #4cc9f0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(76, 201, 240, 0.5));
 }
 
-/* የቢንጎ ፊደላት ራስጌ (B-I-N-G-O) */
-.bingo-header {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-bottom: 10px;
-    padding: 0 10px;
-}
-
-.bingo-header span {
-    background: #e94560;
-    color: white;
-    font-weight: bold;
-    font-size: 1.2rem;
-    padding: 8px 0;
-    border-radius: 5px;
-    box-shadow: 0 4px #9a1f33;
-}
-
-/* የቁጥሮቹ መያዣ */
+/* 🔢 የቁጥሮች ሳጥን (Grid) */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
-    background: #16213e;
+    background: rgba(255, 255, 255, 0.05);
     padding: 15px;
     border-radius: 15px;
-    border: 2px solid #e94560;
-    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* እያንዳንዱ ቁጥር (Cell) */
-.cell {
-    aspect-ratio: 1;
-    background: #0f3460;
-    border: 1px solid #533483;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+button {
+    background: #1f4068;
+    border: 1px solid #4cc9f0;
+    color: white;
+    padding: 15px 5px;
     font-size: 1.1rem;
     font-weight: bold;
     border-radius: 8px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.cell:hover {
-    transform: scale(1.05);
-    background: #533483;
-}
-
-/* ተጫዋቹ የነካው ቁጥር */
-.cell.marked {
-    background: #e94560 !important;
-    color: white;
-    text-decoration: line-through;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-}
-
-/* መሃልኛው FREE ቦታ */
-.cell.free {
-    background: #ffcc00;
-    color: #1a1a2e;
-    font-size: 0.7rem;
-    border: 2px solid #ffcc00;
-}
-
-/* አዲስ ካርድ ማውጫ ቁልፍ */
-button {
-    width: 100%;
-    padding: 15px;
-    font-size: 1rem;
-    background: #00d2ff;
-    color: #1a1a2e;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: bold;
-    text-transform: uppercase;
     transition: 0.3s;
+    cursor: pointer;
 }
 
 button:hover {
-    background: #0099cc;
-    box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+    background: #4cc9f0;
+    color: #1a1a2e;
+    transform: scale(1.05);
 }
 
-/* የጨዋታ ሁኔታ እና የኮሚሽን ዳሽቦርድ */
-#game-status {
+button.taken {
+    background: #e94560 !important;
+    border-color: #ff4d4d;
+    box-shadow: 0 0 15px #e94560;
+}
+
+/* 🔵 የወጣው ቁጥር ማሳያ (Ball) */
+.current-number-ball {
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle at 30% 30%, #00f5d4, #00b49d);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 4rem;
+    font-weight: 900;
+    color: #1a1a2e;
+    margin: 20px auto;
+    box-shadow: 0 0 30px rgba(0, 245, 212, 0.6), inset -5px -5px 15px rgba(0,0,0,0.3);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 245, 212, 0.6); }
+    50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(0, 245, 212, 0.8); }
+    100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 245, 212, 0.6); }
+}
+
+/* 💳 የተጫዋች ካርድ ማሳያ */
+.player-card-box {
+    background: linear-gradient(145deg, #16213e, #0f3460);
+    border: 2px solid #4cc9f0;
+    border-radius: 20px;
+    padding: 20px;
+    margin-top: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.history-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 12px;
+    border-radius: 5px;
     font-size: 0.9rem;
-    line-height: 1.6;
-    margin-bottom: 15px;
-}
-
-#timer-display {
-    color: #ffcc00;
-    font-weight: bold;
-    font-size: 1.1rem;
-    margin-top: 5px;
+    border: 1px solid rgba(76, 201, 240, 0.3);
 }
