@@ -24,56 +24,66 @@ let userData = {
     id: tg.initDataUnsafe?.user?.id || Math.floor(Math.random() * 1000) 
 };
 
-// የጨዋታውን ሁኔታ (State) ከዳታቤዝ መከታተል
+// የጨዋታውን ሁኔታ ከዳታቤዝ መከታተል
 db.ref("gameState").on("value", (snapshot) => {
     const data = snapshot.val();
     if (!data) {
-        // ዳታቤዙ ባዶ ከሆነ መጀመሪያ WAITING እናድርገው
+        // ዳታቤዙ ባዶ ከሆነ ማስጀመሪያ መረጃ መሙላት
         db.ref("gameState").set({ status: "WAITING", timer: 30, currentNum: 0 });
         return;
     }
 
     if (data.status === "WAITING") {
-        updateSelectionScreen(data.takenCards || {}, data.timer);
+        showSelectionScreen(data.takenCards || {}, data.timer);
     } else if (data.status === "PLAYING") {
         if (myCardNum) {
-            updateGameScreen(data.currentNum, data.calledNumbers || []);
+            showGameScreen(data.currentNum, data.calledNumbers || []);
         } else {
             showWaitScreen();
         }
     }
 });
 
-// --- 1. የካርድ ምርጫ ገጽ ---
-function updateSelectionScreen(takenCards, timer) {
+// 1. የካርድ ምርጫ ገጽ (1-80)
+function showSelectionScreen(takenCards, timer) {
+    let gridHTML = "";
+    for (let i = 1; i <= 80; i++) {
+        // የተያዙ ካርዶች በቀይ ቀለም እንዲታዩ (Red Color)
+        const isTaken = takenCards[i] ? "background-color: #ff4d4d; cursor: not-allowed;" : "background-color: #16213e; cursor: pointer;";
+        gridHTML += `<button class="num-btn" style="${isTaken} color: white; padding: 15px 5px; border: 1px solid #0f3460; border-radius: 5px;" onclick="pickCard(${i}, ${!!takenCards[i]})">${i}</button>`;
+    }
+
     document.body.innerHTML = `
-        <div class="container">
+        <div class="container" style="text-align: center; font-family: sans-serif; color: white; background-color: #1a1a2e; min-height: 100vh; padding: 20px;">
             <h2>🎰 BINGO LIVE 🎰</h2>
-            <div class="card-box">
+            <div class="card-box" style="background: #0f3460; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                 <h3>ካርድ ይምረጡ (1-80)</h3>
-                <p style="color: #ffcc00; font-weight: bold;">ቆጠራ፡ ${timer} ሰከንድ</p>
-                <div class="selection-grid" id="grid"></div>
+                <p id="timer-text" style="color: #ffcc00; font-weight: bold; font-size: 1.2rem;">
+                    ${timer < 30 ? `ቆጠራ፡ ${timer} ሰከንድ` : "የመጀመሪያው ተጫዋች ሲመርጥ ቆጠራ ይጀምራል"}
+                </p>
+                <div class="selection-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-height: 400px; overflow-y: auto; padding: 10px;">
+                    ${gridHTML}
+                </div>
             </div>
         </div>
     `;
-
-    const grid = document.getElementById("grid");
-    for (let i = 1; i <= 80; i++) {
-        const btn = document.createElement("button");
-        btn.innerText = i;
-        btn.className = takenCards[i] ? "num-btn taken" : "num-btn";
-        btn.onclick = () => {
-            if (!takenCards[i] && !myCardNum) {
-                myCardNum = i;
-                db.ref(`gameState/takenCards/${i}`).set(userData.name);
-                if (timer === 30) startGlobalTimer(); // የመጀመሪያው ሰው ሲመርጥ ቆጠራ ይጀምራል
-            }
-        };
-        grid.appendChild(btn);
-    }
 }
 
-// --- 2. የ30 ሰከንድ ቆጠራ Logic ---
+// ካርድ የመምረጥ ተግባር
+window.pickCard = function(num, isTaken) {
+    if (isTaken) return alert("ይህ ካርድ ተይዟል!");
+    if (myCardNum) return alert("ቀድሞውኑ ካርድ መርጠዋል!");
+
+    myCardNum = num;
+    db.ref(`gameState/takenCards/${num}`).set(userData.name);
+    
+    db.ref("gameState/timer").once("value", (s) => {
+        // የመጀመሪያው ተጫዋች ከሆነ ቆጠራ ይጀምራል
+        if (s.val() === 30) startGlobalTimer();
+    });
+};
+
+// 2. የ30 ሰከንድ ቆጠራ Logic
 function startGlobalTimer() {
     let timeLeft = 30;
     const interval = setInterval(() => {
@@ -82,19 +92,22 @@ function startGlobalTimer() {
         if (timeLeft <= 0) {
             clearInterval(interval);
             db.ref("gameState/status").set("PLAYING");
-            db.ref("gameState/calledNumbers").set([]);
-            startAutoCalling(); // አውቶማቲክ ቁጥር መጥራት ይጀምራል
+            startAutoCalling();
         }
     }, 1000);
 }
 
-// --- 3. አውቶማቲክ ቁጥር መጥራት ---
+// 3. አውቶማቲክ ጥሪ በየ 3 ሰከንዱ
 function startAutoCalling() {
     let pool = Array.from({length: 75}, (_, i) => i + 1);
     let called = [];
     
     const callInterval = setInterval(() => {
-        if (pool.length === 0) { clearInterval(callInterval); return; }
+        if (pool.length === 0) {
+            clearInterval(callInterval);
+            setTimeout(resetGame, 10000); // ጨዋታው ሲያልቅ ከ10 ሰከንድ በኋላ አዲስ ዙር ያዘጋጃል
+            return;
+        }
         
         let randomIndex = Math.floor(Math.random() * pool.length);
         let num = pool.splice(randomIndex, 1)[0];
@@ -102,38 +115,46 @@ function startAutoCalling() {
         
         db.ref("gameState/currentNum").set(num);
         db.ref("gameState/calledNumbers").set(called);
-
-        // አሸናፊ ከተገኘ እዚህ ጋር ቼክ ማድረግ ይቻላል (ለጊዜው 20 ቁጥር ሲወጣ ይቁም)
-        if (called.length >= 75) {
-            clearInterval(callInterval);
-            setTimeout(() => db.ref("gameState").set({ status: "WAITING", timer: 30 }), 5000);
-        }
-    }, 4000); // በየ 4 ሰከንዱ ቁጥር ይጠራል
+    }, 3000); // ጥሪው በየ 3 ሰከንዱ ይሆናል
 }
 
-// --- 4. የጨዋታ ገጽ እና መጠበቂያ ---
+// 4. የጨዋታ ገጽ
+function showGameScreen(currentNum, calledNumbers) {
+    document.body.innerHTML = `
+        <div class="container" style="text-align: center; font-family: sans-serif; color: white; background-color: #1a1a2e; min-height: 100vh; padding: 20px;">
+            <div class="card-box" style="background: #0f3460; padding: 30px; border-radius: 10px;">
+                <h1 style="font-size: 4rem; color: #e94560; margin: 0;">${currentNum || "..."}</h1>
+                <p style="font-size: 1.2rem;">የእርስዎ ካርድ ቁጥር፦ <span style="color: #ffcc00; font-weight: bold;">${myCardNum}</span></p>
+                <hr style="border: 0.5px solid #533483; margin: 20px 0;">
+                <p>የወጡ ቁጥሮች፦ ${calledNumbers.slice(-5).join(", ")}</p>
+                <div style="font-size: 0.8rem; color: #aaa;">ጠቅላላ የወጡ፦ ${calledNumbers.length}/75</div>
+            </div>
+        </div>
+    `;
+}
+
+// 5. መጠበቂያ ገጽ (ጨዋታ ከተጀመረ በኋላ ለሚመጡ)
 function showWaitScreen() {
     document.body.innerHTML = `
-        <div class="container">
-            <div class="card-box">
+        <div class="container" style="text-align: center; font-family: sans-serif; color: white; background-color: #1a1a2e; min-height: 100vh; padding: 40px;">
+            <div class="card-box" style="background: #0f3460; padding: 30px; border-radius: 10px;">
                 <h2 style="color: #ff4d4d;">ጨዋታ ተጀምሯል!</h2>
-                <p>እባክዎ አሁን ያለው ጨዋታ እስኪያልቅ ይጠብቁ...</p>
-                <div class="loader"></div>
+                <p>እባክዎ አሁን ያለው ጨዋታ እስኪያልቅ ይጠብቁ።</p>
+                <p>አዲስ ዙር ሲጀመር ካርድ መያዝ ይችላሉ።</p>
+                <div style="border: 4px solid #f3f3f3; border-top: 4px solid #e94560; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 20px auto;"></div>
             </div>
         </div>
+        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
     `;
 }
 
-function updateGameScreen(currentNum, calledNumbers) {
-    // እዚህ ጋር የቢንጎ ካርዱን እና የወጣውን ቁጥር የምናሳይበት ገጽ
-    document.body.innerHTML = `
-        <div class="container">
-            <div class="card-box">
-                <h2>ቁጥር፡ ${currentNum}</h2>
-                <p>የተመረጠው ካርድ፡ ${myCardNum}</p>
-                <div id="bingo-card" class="grid-container"></div>
-            </div>
-        </div>
-    `;
-    // የካርድ ግሪዱን እዚህ መሥራት ይቻላል...
+function resetGame() {
+    db.ref("gameState").set({
+        status: "WAITING",
+        timer: 30,
+        currentNum: 0,
+        takenCards: {},
+        calledNumbers: []
+    });
+    myCardNum = null;
 }
