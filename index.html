@@ -4,38 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bingo Mini App</title>
-    <style>
-        body { background-color: #1a1a2e; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; overflow-x: hidden; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-width: 350px; margin: 20px auto; }
-        .cell { aspect-ratio: 1; background: #16213e; border: 2px solid #e94560; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .cell.active { background: #e94560; color: white; transform: scale(1.05); }
-        button { background: #00d2ff; color: #1a1a2e; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3); }
-        h2 { color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.5); }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h2>🎰 BINGO MINI APP 🎰</h2>
-    <div class="grid" id="board"></div>
-    <button onclick="generate()">አዲስ ካርድ አውጣ</button>
-
-    <script>
-        function generate() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            let nums = [];
-            while(nums.length < 25) {
-                let r = Math.floor(Math.random() * 75) + 1;
-                if(!nums.includes(r)) nums.push(r);
-            }
-            nums.forEach(n => {
-                const div = document.createElement('div');
-                div.className = 'cell';
-                div.innerText = n;
-                div.onclick = function() { this.classList.toggle('active'); };
-                board.appendChild(div);
-            });
-        }
-        generate();
-    </script>
+    <div class="container">
+        <h1>🎰 BINGO MINI APP 🎰</h1>
+        <div id="bingo-card" class="grid-container"></div>
+        <button id="new-card-btn">Issue a new card</button>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
