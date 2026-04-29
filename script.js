@@ -8,50 +8,32 @@ const firebaseConfig = {
   appId: "1:793283320707:web:4a6de806ba7a3048eaf4b6"
 };
 
-// Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.database();
-
 let myCardNum = null;
 
-// የጨዋታ ሁኔታን መከታተል
 db.ref("gameState").on("value", (snapshot) => {
     const data = snapshot.val() || { status: "WAITING", timer: 30 };
     const root = document.getElementById("game-root");
+    if (!root) return;
     
     if (data.status === "WAITING") {
-        renderSelection(data.takenCards || {}, data.timer, root);
+        let gridHTML = "";
+        for (let i = 1; i <= 80; i++) {
+            const isTaken = !!(data.takenCards && data.takenCards[i]);
+            gridHTML += `<button onclick="pick(${i}, ${isTaken})" style="background:${isTaken ? '#ff4d4d' : '#16213e'}; color:white; border:none; padding:10px; border-radius:5px;">${i}</button>`;
+        }
+        root.innerHTML = `<h2>🎰 BINGO 🎰</h2><p>ቆጠራ፡ ${data.timer} ሰከንድ</p><div style="display:grid; grid-template-columns:repeat(8, 1fr); gap:5px;">${gridHTML}</div>`;
     } else {
-        renderGame(data.currentNum, data.calledNumbers || [], root);
+        root.innerHTML = `<h2>የወጣው ቁጥር</h2><h1 style="font-size:4rem; color:#00f5d4;">${data.currentNum || "..."}</h1><p>የእርስዎ፦ ${myCardNum || "አልመረጡም"}</p><p>ያለፉት፦ ${(data.calledNumbers || []).slice(-5).join(", ")}</p>`;
     }
 });
-
-function renderSelection(takenCards, timer, root) {
-    let gridHTML = "";
-    for (let i = 1; i <= 80; i++) {
-        const isTaken = !!takenCards[i];
-        const color = isTaken ? "#ff4d4d" : "#16213e";
-        gridHTML += `<button onclick="pick(${i}, ${isTaken})" style="background:${color}; color:white; padding:15px 5px; border:none; border-radius:5px; font-weight:bold;">${i}</button>`;
-    }
-    
-    root.innerHTML = `
-        <div style="padding:20px; text-align:center;">
-            <h2 style="color:#4cc9f0;">🎰 BINGO LIVE 🎰</h2>
-            <p style="color:#ffcc00; font-size:1.3rem; font-weight:bold;">ቆጠራ፡ ${timer} ሰከንድ</p>
-            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;">${gridHTML}</div>
-        </div>
-    `;
-}
 
 window.pick = function(n, taken) {
     if (taken || myCardNum) return;
     myCardNum = n;
-    db.ref(`gameState/takenCards/${n}`).set("User");
-    db.ref("gameState/timer").once("value", s => {
-        if(s.val() === 30) startTimer();
-    });
+    db.ref(`gameState/takenCards/${n}`).set(true);
+    db.ref("gameState/timer").once("value", s => { if(s.val() === 30) startTimer(); });
 };
 
 function startTimer() {
@@ -73,29 +55,12 @@ function callNumbers() {
     const inv = setInterval(() => {
         if (pool.length === 0) {
             clearInterval(inv);
-            // ጨዋታው ሲያልቅ ከ10 ሰከንድ በኋላ ሪሴት ያደርጋል
-            setTimeout(() => {
-                db.ref("gameState").set({ status: "WAITING", timer: 30, takenCards: {}, calledNumbers: [] });
-            }, 10000);
+            setTimeout(() => db.ref("gameState").set({ status: "WAITING", timer: 30 }), 5000); // ጨዋታው ሲያልቅ Reset ማድረጊያ
             return;
         }
-        let randomIndex = Math.floor(Math.random() * pool.length);
-        let n = pool.splice(randomIndex, 1)[0];
+        let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         called.push(n);
         db.ref("gameState/currentNum").set(n);
         db.ref("gameState/calledNumbers").set(called);
-    }, 3000); 
-}
-
-function renderGame(cur, all, root) {
-    root.innerHTML = `
-        <div style="padding:40px; text-align:center;">
-            <h2 style="color:#e94560;">የወጣው ቁጥር</h2>
-            <h1 style="font-size:6rem; margin:20px 0; color:#00f5d4;">${cur || "..."}</h1>
-            <div style="background:#16213e; padding:15px; border-radius:10px;">
-                <p>የእርስዎ ካርድ፦ <span style="color:#ffcc00; font-size:1.5rem;">${myCardNum || "አልተመረጠም"}</span></p>
-                <p style="word-wrap: break-word;">ያለፉት ቁጥሮች፦ ${all.slice(-10).join(", ")}</p>
-            </div>
-        </div>
-    `;
+    }, 3000);
 }
