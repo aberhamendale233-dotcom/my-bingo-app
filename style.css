@@ -1,59 +1,126 @@
 body {
     background-color: #1a1a2e;
     color: white;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
+    padding: 20px;
 }
 
-.container { text-align: center; }
+.container {
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
 
+h1 {
+    font-size: 1.5rem;
+    color: #00d2ff;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* የቢንጎ ፊደላት ራስጌ (B-I-N-G-O) */
+.bingo-header {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 0 10px;
+}
+
+.bingo-header span {
+    background: #e94560;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+    padding: 8px 0;
+    border-radius: 5px;
+    box-shadow: 0 4px #9a1f33;
+}
+
+/* የቁጥሮቹ መያዣ */
 .grid-container {
     display: grid;
-    grid-template-columns: repeat(5, 65px);
+    grid-template-columns: repeat(5, 1fr);
     gap: 10px;
     background: #16213e;
-    padding: 20px;
+    padding: 15px;
     border-radius: 15px;
-    border: 3px solid #e94560;
+    border: 2px solid #e94560;
     margin-bottom: 20px;
 }
 
+/* እያንዳንዱ ቁጥር (Cell) */
 .cell {
-    width: 65px;
-    height: 65px;
+    aspect-ratio: 1;
     background: #0f3460;
-    border: 1px solid #e94560;
+    border: 1px solid #533483;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: bold;
     border-radius: 8px;
     cursor: pointer;
+    transition: 0.2s;
 }
 
+.cell:hover {
+    transform: scale(1.05);
+    background: #533483;
+}
+
+/* ተጫዋቹ የነካው ቁጥር */
 .cell.marked {
-    background: #e94560;
+    background: #e94560 !important;
     color: white;
     text-decoration: line-through;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
 }
 
+/* መሃልኛው FREE ቦታ */
 .cell.free {
     background: #ffcc00;
     color: #1a1a2e;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
+    border: 2px solid #ffcc00;
 }
 
+/* አዲስ ካርድ ማውጫ ቁልፍ */
 button {
-    padding: 15px 30px;
+    width: 100%;
+    padding: 15px;
     font-size: 1rem;
     background: #00d2ff;
+    color: #1a1a2e;
     border: none;
-    border-radius: 50px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #0099cc;
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
+}
+
+/* የጨዋታ ሁኔታ እና የኮሚሽን ዳሽቦርድ */
+#game-status {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+#timer-display {
+    color: #ffcc00;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-top: 5px;
 }
