@@ -17,26 +17,42 @@ db.ref("gameState").on("value", (snapshot) => {
     const root = document.getElementById("game-root");
     if (!root) return;
     
-    // ቆጠራው 0 እስኪሆን ድረስ ቁጥሮቹ አይጠፉም
+    if (data.status === "FINISHED") {
+        root.innerHTML = `<div style="text-align:center; padding:50px; color:#ffcc00;"><h2>ጨዋታው ተጠናቋል!</h2><p>አስተዳዳሪው አዲስ ዙር እስኪጀምር ይጠብቁ።</p></div>`;
+        return;
+    }
+
     if (data.status === "WAITING") {
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
             const isTaken = !!(data.takenCards && data.takenCards[i]);
-            gridHTML += `<button onclick="pick(${i}, ${isTaken})" style="background:${isTaken ? '#ff4d4d' : '#16213e'}; color:white; border:none; padding:10px; cursor:pointer; border-radius:5px; font-weight:bold;">${i}</button>`;
+            gridHTML += `<button onclick="pick(${i}, ${isTaken})" style="background:${isTaken ? '#ff4d4d' : '#16213e'}; color:white; border:1px solid #4cc9f0; padding:12px; cursor:pointer; border-radius:5px; font-weight:bold;">${i}</button>`;
         }
         root.innerHTML = `
-            <h2 style="color:#4cc9f0;">🎰 BINGO LIVE 🎰</h2>
-            <p style="font-size:1.5rem; color:#ffcc00; font-weight:bold;">ቆጠራ፡ ${data.timer} ሰከንድ</p>
-            <div style="display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; max-width:500px; margin:auto;">${gridHTML}</div>
+            <div style="text-align:center; padding:10px;">
+                <h2 style="color:#4cc9f0; text-shadow: 0 0 10px #4cc9f0;">🎰 BINGO LIVE 🎰</h2>
+                <div style="background:#e94560; color:white; padding:10px; border-radius:50px; display:inline-block; margin-bottom:15px; font-weight:bold;">ቆጠራ፡ ${data.timer} ሰከንድ</div>
+                <div style="display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; max-width:500px; margin:auto;">${gridHTML}</div>
+            </div>
         `;
     } else {
+        // ቁጥር መጥራት ሲጀምር (PLAYING MODE)
+        const calledList = data.calledNumbers || [];
         root.innerHTML = `
-            <div style="text-align:center; padding:20px;">
-                <h2 style="color:#e94560;">የወጣው ቁጥር</h2>
-                <h1 style="font-size:6rem; color:#00f5d4;">${data.currentNum || "..."}</h1>
-                <div style="background:#16213e; padding:15px; border-radius:10px;">
-                    <p>የእርስዎ ካርድ፦ <span style="color:#ffcc00; font-weight:bold;">${myCardNum || "አልመረጡም"}</span></p>
-                    <p>ያለፉት ቁጥሮች፦ ${(data.calledNumbers || []).slice(-8).join(", ")}</p>
+            <div style="text-align:center; padding:20px; font-family:sans-serif;">
+                <h2 style="color:#e94560; margin-bottom:5px;">የወጣው ቁጥር</h2>
+                <div style="width:120px; height:120px; line-height:120px; background:#00f5d4; color:#1a1a2e; font-size:4rem; font-weight:bold; border-radius:50%; margin: 20px auto; box-shadow: 0 0 20px #00f5d4;">${data.currentNum || "..."}</div>
+                
+                <div style="background:#16213e; padding:20px; border-radius:15px; border:2px solid #4cc9f0; margin-top:20px;">
+                    <p style="color:#4cc9f0; font-size:1.2rem;">የእርስዎ ካርድ</p>
+                    <div style="font-size:3rem; color:#ffcc00; font-weight:bold; margin:10px 0;">${myCardNum || "አልመረጡም"}</div>
+                    
+                    <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+                    
+                    <p style="color:#aaa;">ያለፉት ቁጥሮች</p>
+                    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size:1.1rem; color:white;">
+                        ${calledList.map(num => `<span style="background:#333; padding:5px 10px; border-radius:5px;">${num}</span>`).join("")}
+                    </div>
                 </div>
             </div>
         `;
@@ -45,12 +61,13 @@ db.ref("gameState").on("value", (snapshot) => {
 
 window.pick = function(n, taken) {
     if (taken || myCardNum) return;
-    myCardNum = n;
-    db.ref(`gameState/takenCards/${n}`).set(true);
-    db.ref("gameState/timer").once("value", s => {
-        if (!s.exists() || s.val() === 30) {
-            startTimer();
-        }
+    db.ref("gameState/status").once("value", s => {
+        if (s.val() === "FINISHED" || s.val() === "PLAYING") return;
+        myCardNum = n;
+        db.ref(`gameState/takenCards/${n}`).set(true);
+        db.ref("gameState/timer").once("value", tSnap => {
+            if (!tSnap.exists() || tSnap.val() === 30) startTimer();
+        });
     });
 };
 
@@ -73,13 +90,15 @@ function callNumbers() {
     const inv = setInterval(() => {
         if (pool.length === 0) {
             clearInterval(inv);
-            // ጨዋታው ሲያልቅ ወደ መጀመሪያው ይመልሳል
-            setTimeout(() => db.ref("gameState").remove(), 10000);
+            db.ref("gameState/status").set("FINISHED");
             return;
         }
         let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         called.push(n);
-        db.ref("gameState/currentNum").set(n);
-        db.ref("gameState/calledNumbers").set(called);
+        // ቁጥሩን እና ሙሉ ዝርዝሩን በአንድ ላይ አፕዴት ያደርጋል
+        db.ref("gameState").update({
+            currentNum: n,
+            calledNumbers: called
+        });
     }, 3000);
 }
