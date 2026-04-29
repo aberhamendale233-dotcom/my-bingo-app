@@ -17,7 +17,7 @@ db.ref("gameState").on("value", (snapshot) => {
     const root = document.getElementById("game-root");
     if (!root) return;
     
-    // ቆጠራው እስኪያልቅ (0 እስኪሆን) ድረስ ቁጥሮቹ (1-80) አይጠፉም
+    // ቆጠራው 0 እስኪሆን ድረስ ቁጥሮቹ አይጠፉም
     if (data.status === "WAITING") {
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
@@ -30,7 +30,6 @@ db.ref("gameState").on("value", (snapshot) => {
             <div style="display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; max-width:500px; margin:auto;">${gridHTML}</div>
         `;
     } else {
-        // 30 ሰከንዱ አልቆ "PLAYING" ሲሆን ብቻ ነው ይህ የሚመጣው
         root.innerHTML = `
             <div style="text-align:center; padding:20px;">
                 <h2 style="color:#e94560;">የወጣው ቁጥር</h2>
@@ -48,8 +47,6 @@ window.pick = function(n, taken) {
     if (taken || myCardNum) return;
     myCardNum = n;
     db.ref(`gameState/takenCards/${n}`).set(true);
-    
-    // ቆጠራው ገና ካልጀመረ (30 ከሆነ) እንዲጀምር ያደርጋል
     db.ref("gameState/timer").once("value", s => {
         if (!s.exists() || s.val() === 30) {
             startTimer();
@@ -64,7 +61,6 @@ function startTimer() {
         db.ref("gameState/timer").set(t);
         if (t <= 0) {
             clearInterval(inv);
-            // ቆጠራው 0 ሲገባ ብቻ ነው "PLAYING" የሚሆነው
             db.ref("gameState/status").set("PLAYING");
             callNumbers();
         }
@@ -77,7 +73,7 @@ function callNumbers() {
     const inv = setInterval(() => {
         if (pool.length === 0) {
             clearInterval(inv);
-            // ጨዋታው ሲያልቅ ወደ መጀመሪያው (WAITING) እንዲመለስ ዳታቤዙን ያጠፋል
+            // ጨዋታው ሲያልቅ ወደ መጀመሪያው ይመልሳል
             setTimeout(() => db.ref("gameState").remove(), 10000);
             return;
         }
