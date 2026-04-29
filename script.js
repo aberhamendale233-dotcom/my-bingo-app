@@ -18,7 +18,12 @@ db.ref("gameState").on("value", (snapshot) => {
     if (!root) return;
     
     if (data.status === "FINISHED") {
-        root.innerHTML = `<div style="text-align:center; padding:50px; color:#ffcc00;"><h2>ጨዋታው ተጠናቋል!</h2><p>አስተዳዳሪው አዲስ ዙር እስኪጀምር ይጠብቁ።</p></div>`;
+        root.innerHTML = `
+            <div class="player-card-box">
+                <h2 style="color:#ffcc00;">ዙሩ ተጠናቋል!</h2>
+                <p>አድሚኑ አዲስ ዙር እስኪጀምር ይጠብቁ።</p>
+                <button onclick="location.reload()" style="margin-top:20px;">Refresh</button>
+            </div>`;
         return;
     }
 
@@ -26,32 +31,31 @@ db.ref("gameState").on("value", (snapshot) => {
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
             const isTaken = !!(data.takenCards && data.takenCards[i]);
-            gridHTML += `<button onclick="pick(${i}, ${isTaken})" style="background:${isTaken ? '#ff4d4d' : '#16213e'}; color:white; border:1px solid #4cc9f0; padding:12px; cursor:pointer; border-radius:5px; font-weight:bold;">${i}</button>`;
+            gridHTML += `<button onclick="pick(${i}, ${isTaken})" class="${isTaken ? 'taken' : ''}">${i}</button>`;
         }
         root.innerHTML = `
-            <div style="text-align:center; padding:10px;">
-                <h2 style="color:#4cc9f0; text-shadow: 0 0 10px #4cc9f0;">🎰 BINGO LIVE 🎰</h2>
-                <div style="background:#e94560; color:white; padding:10px; border-radius:50px; display:inline-block; margin-bottom:15px; font-weight:bold;">ቆጠራ፡ ${data.timer} ሰከንድ</div>
-                <div style="display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; max-width:500px; margin:auto;">${gridHTML}</div>
+            <h2>🎰 BINGO LIVE 🎰</h2>
+            <div style="background:#e94560; color:white; padding:8px 20px; border-radius:50px; display:inline-block; margin-bottom:20px; font-weight:bold; box-shadow:0 0 10px #e94560;">
+                ቆጠራ፡ ${data.timer}s
             </div>
+            <div class="grid-container">${gridHTML}</div>
         `;
     } else {
-        // ቁጥር መጥራት ሲጀምር (PLAYING MODE)
         const calledList = data.calledNumbers || [];
         root.innerHTML = `
-            <div style="text-align:center; padding:20px; font-family:sans-serif;">
-                <h2 style="color:#e94560; margin-bottom:5px;">የወጣው ቁጥር</h2>
-                <div style="width:120px; height:120px; line-height:120px; background:#00f5d4; color:#1a1a2e; font-size:4rem; font-weight:bold; border-radius:50%; margin: 20px auto; box-shadow: 0 0 20px #00f5d4;">${data.currentNum || "..."}</div>
+            <div style="text-align:center;">
+                <h2 style="color:#e94560; font-size:1.5rem;">የወጣው ቁጥር</h2>
+                <div class="current-number-ball">${data.currentNum || "..."}</div>
                 
-                <div style="background:#16213e; padding:20px; border-radius:15px; border:2px solid #4cc9f0; margin-top:20px;">
-                    <p style="color:#4cc9f0; font-size:1.2rem;">የእርስዎ ካርድ</p>
-                    <div style="font-size:3rem; color:#ffcc00; font-weight:bold; margin:10px 0;">${myCardNum || "አልመረጡም"}</div>
+                <div class="player-card-box">
+                    <p style="color:#4cc9f0; font-weight:bold; margin-bottom:5px;">የእርስዎ ካርድ</p>
+                    <div style="font-size:3.5rem; color:#ffcc00; font-weight:900; text-shadow:0 0 15px rgba(255,204,0,0.4);">${myCardNum || "---"}</div>
                     
-                    <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-                    
-                    <p style="color:#aaa;">ያለፉት ቁጥሮች</p>
-                    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size:1.1rem; color:white;">
-                        ${calledList.map(num => `<span style="background:#333; padding:5px 10px; border-radius:5px;">${num}</span>`).join("")}
+                    <div style="margin-top:25px;">
+                        <p style="color:#aaa; font-size:0.8rem; text-transform:uppercase;">ያለፉ ቁጥሮች</p>
+                        <div class="history-list">
+                            ${calledList.slice(-10).map(num => `<span class="history-item">${num}</span>`).join("")}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -95,10 +99,6 @@ function callNumbers() {
         }
         let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
         called.push(n);
-        // ቁጥሩን እና ሙሉ ዝርዝሩን በአንድ ላይ አፕዴት ያደርጋል
-        db.ref("gameState").update({
-            currentNum: n,
-            calledNumbers: called
-        });
-    }, 3000);
+        db.ref("gameState").update({ currentNum: n, calledNumbers: called });
+    }, 3500);
 }
