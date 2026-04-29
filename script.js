@@ -17,7 +17,7 @@ db.ref("gameState").on("value", (snapshot) => {
     const root = document.getElementById("game-root");
     if (!root) return;
     
-    // ቆጠራው እስኪያልቅ ድረስ ቁጥሮቹ አይጠፉም
+    // ቆጠራው እስኪያልቅ (0 እስኪሆን) ድረስ ቁጥሮቹ (1-80) አይጠፉም
     if (data.status === "WAITING") {
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
@@ -26,18 +26,18 @@ db.ref("gameState").on("value", (snapshot) => {
         }
         root.innerHTML = `
             <h2 style="color:#4cc9f0;">🎰 BINGO LIVE 🎰</h2>
-            <p style="font-size:1.2rem; color:#ffcc00;">ቆጠራ፡ ${data.timer} ሰከንድ</p>
+            <p style="font-size:1.5rem; color:#ffcc00; font-weight:bold;">ቆጠራ፡ ${data.timer} ሰከንድ</p>
             <div style="display:grid; grid-template-columns:repeat(8, 1fr); gap:5px; max-width:500px; margin:auto;">${gridHTML}</div>
         `;
     } else {
-        // ጨዋታው ሲጀመር ብቻ ነው ቁጥሩ የሚመጣው
+        // 30 ሰከንዱ አልቆ "PLAYING" ሲሆን ብቻ ነው ይህ የሚመጣው
         root.innerHTML = `
-            <div style="padding:20px;">
+            <div style="text-align:center; padding:20px;">
                 <h2 style="color:#e94560;">የወጣው ቁጥር</h2>
-                <h1 style="font-size:5rem; color:#00f5d4;">${data.currentNum || "..."}</h1>
+                <h1 style="font-size:6rem; color:#00f5d4;">${data.currentNum || "..."}</h1>
                 <div style="background:#16213e; padding:15px; border-radius:10px;">
-                    <p>የእርስዎ ካርድ፦ <span style="color:#ffcc00;">${myCardNum || "አልመረጡም"}</span></p>
-                    <p>ያለፉት ቁጥሮች፦ ${(data.calledNumbers || []).slice(-10).join(", ")}</p>
+                    <p>የእርስዎ ካርድ፦ <span style="color:#ffcc00; font-weight:bold;">${myCardNum || "አልመረጡም"}</span></p>
+                    <p>ያለፉት ቁጥሮች፦ ${(data.calledNumbers || []).slice(-8).join(", ")}</p>
                 </div>
             </div>
         `;
@@ -49,7 +49,7 @@ window.pick = function(n, taken) {
     myCardNum = n;
     db.ref(`gameState/takenCards/${n}`).set(true);
     
-    // የመጀመሪያው ሰው ሲነካ ቆጠራው ይጀምራል ግን ሁኔታው (status) አይቀየርም
+    // ቆጠራው ገና ካልጀመረ (30 ከሆነ) እንዲጀምር ያደርጋል
     db.ref("gameState/timer").once("value", s => {
         if (!s.exists() || s.val() === 30) {
             startTimer();
@@ -64,7 +64,7 @@ function startTimer() {
         db.ref("gameState/timer").set(t);
         if (t <= 0) {
             clearInterval(inv);
-            // 30 ሰከንዱ ሲያልቅ ብቻ ነው ሁኔታው ወደ PLAYING የሚቀየረው
+            // ቆጠራው 0 ሲገባ ብቻ ነው "PLAYING" የሚሆነው
             db.ref("gameState/status").set("PLAYING");
             callNumbers();
         }
@@ -77,7 +77,7 @@ function callNumbers() {
     const inv = setInterval(() => {
         if (pool.length === 0) {
             clearInterval(inv);
-            // ጨዋታው ሲያልቅ ወደ መጀመሪያው ይመልሳል
+            // ጨዋታው ሲያልቅ ወደ መጀመሪያው (WAITING) እንዲመለስ ዳታቤዙን ያጠፋል
             setTimeout(() => db.ref("gameState").remove(), 10000);
             return;
         }
