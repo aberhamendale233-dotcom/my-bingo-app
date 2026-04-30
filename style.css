@@ -1,89 +1,81 @@
 body {
-    background: radial-gradient(circle, #1a1a2e 0%, #16213e 100%);
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* ባግራውንዱን እንደ ምስሉ ጥቁር ሰማያዊ ያደርገዋል */
+    background-color: #1a1a2e; 
     color: white;
-    font-family: 'Segoe UI', sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    margin: 0;
 }
 
 #game-root {
     width: 100%;
-    max-width: 450px;
+    max-width: 400px;
     padding: 20px;
     text-align: center;
 }
 
-h2 {
-    font-size: 1.8rem;
-    background: linear-gradient(to bottom, #00f5d4, #4cc9f0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 20px;
+/* የካርዱ ጀርባ ነጭ እንዲሆን */
+.bingo-card-5x5 {
+    background: #ffffff;
+    padding: 15px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin-top: 20px;
 }
 
+/* ትልቁ የቁጥር ማሳያ ክብ (Ball) */
+.current-number-ball {
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00);
+    border-radius: 50%;
+    margin: 20px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #1a1a2e;
+    border: 5px solid #ffffff;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+/* የቁጥሮች መምረጫ ግሪድ */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 8px;
-    background: rgba(255, 255, 255, 0.05);
+    background: #16213e;
     padding: 15px;
     border-radius: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 button {
-    background: #1f4068;
-    border: 1px solid #4cc9f0;
+    background: #0f3460;
     color: white;
-    padding: 12px 2px;
-    font-weight: bold;
+    border: none;
+    padding: 12px;
     border-radius: 8px;
+    font-weight: bold;
     cursor: pointer;
     transition: 0.3s;
 }
 
+button:hover {
+    background: #e94560;
+}
+
 button.taken {
-    background: #e94560 !important;
-    box-shadow: 0 0 10px #e94560;
+    background: #555 !important;
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
-.current-number-ball {
-    width: 110px;
-    height: 110px;
-    background: radial-gradient(circle at 30% 30%, #00f5d4, #00b49d);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 3.5rem;
-    font-weight: 900;
-    color: #1a1a2e;
-    margin: 20px auto;
-    box-shadow: 0 0 25px rgba(0, 245, 212, 0.6);
-}
-
-.player-card-box {
-    background: rgba(15, 52, 96, 0.9);
-    border: 2px solid #4cc9f0;
-    border-radius: 20px;
-    padding: 20px;
-    margin-top: 20px;
-}
-
-.history-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    justify-content: center;
-    margin-top: 10px;
-}
-
-.history-item {
-    background: #333;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
+h2 {
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
