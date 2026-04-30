@@ -1,81 +1,111 @@
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* ባግራውንዱን እንደ ምስሉ ጥቁር ሰማያዊ ያደርገዋል */
-    background-color: #1a1a2e; 
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+const firebaseConfig = {
+  apiKey: "AIzaSyCtLHUAuFZNeWDCx2-1W8ZZDa43gRDjLFc",
+  authDomain: "my-bingo-app-cdc12.firebaseapp.com",
+  databaseURL: "https://my-bingo-app-cdc12-default-rtdb.firebaseio.com",
+  projectId: "my-bingo-app-cdc12",
+  storageBucket: "my-bingo-app-cdc12.firebasestorage.app",
+  messagingSenderId: "793283320707",
+  appId: "1:793283320707:web:4a6de806ba7a3048eaf4b6"
+};
+
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+const db = firebase.database();
+let myFullCard = []; 
+
+db.ref("gameState").on("value", (snapshot) => {
+    const data = snapshot.val() || { status: "WAITING", timer: 30 };
+    const root = document.getElementById("game-root");
+    if (!root) return;
+    
+    if (data.status === "WAITING") {
+        if (myFullCard.length === 0) {
+            let gridHTML = "";
+            for (let i = 1; i <= 80; i++) {
+                const isTaken = !!(data.takenCards && data.takenCards[i]);
+                gridHTML += `<button onclick="generateBingoCard(${i}, ${isTaken})" class="${isTaken ? 'taken' : ''}">${i}</button>`;
+            }
+            root.innerHTML = `<h2>🎰 ካርድ ይምረጡ 🎰</h2><div class="grid-container">${gridHTML}</div>`;
+        } else {
+            root.innerHTML = `
+                <h2>ተዘጋጅተዋል!</h2>
+                <p>ጨዋታው እስኪጀምር ይጠብቁ... (${data.timer}s)</p>
+                <div class="bingo-card-5x5">${renderBingoGrid(myFullCard, [])}</div>
+            `;
+        }
+    } else {
+        const calledNumbers = data.calledNumbers || [];
+        // ቁጥሩን በሳጥን ውስጥ በኳስ መልክ የሚያሳይ
+        root.innerHTML = `
+            <div class="number-display-box">
+                <div class="bingo-ball-call">${data.currentNum || "..."}</div>
+            </div>
+            <div class="bingo-card-5x5">${renderBingoGrid(myFullCard, calledNumbers)}</div>
+        `;
+    }
+});
+
+function renderBingoGrid(card, called) {
+    const letters = ['B', 'I', 'N', 'G', 'O'];
+    return `
+        <div style="background: white; padding: 10px; border-radius: 15px;">
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); margin-bottom: 8px;">
+                ${letters.map(l => `<div style="color:#1a1a2e; font-weight:900; text-align:center;">${l}</div>`).join('')}
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+                ${card.map(num => {
+                    const isHit = called.includes(num) || num === "FREE";
+                    return `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:40px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:5px; font-size:0.8rem;">${num}</div>`;
+                }).join("")}
+            </div>
+        </div>
+    `;
 }
 
-#game-root {
-    width: 100%;
-    max-width: 400px;
-    padding: 20px;
-    text-align: center;
+window.generateBingoCard = function(n, taken) {
+    if (taken || myFullCard.length > 0) return;
+    let nums = [];
+    while(nums.length < 24) {
+        let r = Math.floor(Math.random() * 75) + 1;
+        if(nums.indexOf(r) === -1) nums.push(r);
+    }
+    nums.splice(12, 0, "FREE");
+    myFullCard = nums;
+    db.ref(`gameState/takenCards/${n}`).set(true);
+    db.ref("gameState/timer").once("value", s => { if (!s.exists() || s.val() === 30) startTimer(); });
+};
+
+function startTimer() {
+    let t = 30;
+    db.ref("gameState/status").set("WAITING");
+    const inv = setInterval(() => {
+        t--; 
+        db.ref("gameState/timer").set(t);
+        if (t <= 0) { 
+            clearInterval(inv); 
+            db.ref("gameState/status").set("PLAYING"); 
+            callNumbers(); 
+        }
+    }, 1000);
 }
 
-/* የካርዱ ጀርባ ነጭ እንዲሆን */
-.bingo-card-5x5 {
-    background: #ffffff;
-    padding: 15px;
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    margin-top: 20px;
-}
-
-/* ትልቁ የቁጥር ማሳያ ክብ (Ball) */
-.current-number-ball {
-    width: 100px;
-    height: 100px;
-    background: radial-gradient(circle at 30% 30%, #ffd700, #ff8c00);
-    border-radius: 50%;
-    margin: 20px auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #1a1a2e;
-    border: 5px solid #ffffff;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-}
-
-/* የቁጥሮች መምረጫ ግሪድ */
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    background: #16213e;
-    padding: 15px;
-    border-radius: 15px;
-}
-
-button {
-    background: #0f3460;
-    color: white;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-button:hover {
-    background: #e94560;
-}
-
-button.taken {
-    background: #555 !important;
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
-h2 {
-    color: #ffd700;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+function callNumbers() {
+    let pool = Array.from({length: 75}, (_, i) => i + 1);
+    let called = [];
+    const inv = setInterval(() => {
+        if (pool.length === 0) { clearInterval(inv); return; }
+        let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+        
+        let letter = "";
+        if (n <= 15) letter = "B";
+        else if (n <= 30) letter = "I";
+        else if (n <= 45) letter = "N";
+        else if (n <= 60) letter = "G";
+        else letter = "O";
+        
+        called.push(n);
+        db.ref("gameState").update({ 
+            currentNum: letter + "-" + n, 
+            calledNumbers: called 
+        });
+    }, 4000);
 }
