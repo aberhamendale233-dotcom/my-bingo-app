@@ -34,7 +34,6 @@ db.ref("gameState").on("value", (snapshot) => {
         }
     } else {
         const calledNumbers = data.calledNumbers || [];
-        // ቁጥሩን በሳጥን ውስጥ በኳስ መልክ የሚያሳይ
         root.innerHTML = `
             <div class="number-display-box">
                 <div class="bingo-ball-call">${data.currentNum || "..."}</div>
@@ -94,18 +93,8 @@ function callNumbers() {
     const inv = setInterval(() => {
         if (pool.length === 0) { clearInterval(inv); return; }
         let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-        
-        let letter = "";
-        if (n <= 15) letter = "B";
-        else if (n <= 30) letter = "I";
-        else if (n <= 45) letter = "N";
-        else if (n <= 60) letter = "G";
-        else letter = "O";
-        
+        let letter = (n<=15)?"B":(n<=30)?"I":(n<=45)?"N":(n<=60)?"G":"O";
         called.push(n);
-        db.ref("gameState").update({ 
-            currentNum: letter + "-" + n, 
-            calledNumbers: called 
-        });
+        db.ref("gameState").update({ currentNum: letter + "-" + n, calledNumbers: called });
     }, 4000);
 }
