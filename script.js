@@ -18,7 +18,7 @@ const user = tg?.initDataUnsafe?.user || { id: "guest_" + Math.floor(Math.random
 const userId = user.id;
 
 let myFullCard = []; 
-let restartTriggered = false; // ለተደጋጋሚ ሪስታርት መከላከያ
+let restartTriggered = false;
 
 db.ref(`players/${userId}`).on("value", (snapshot) => {
     myFullCard = snapshot.exists() ? snapshot.val().card : [];
@@ -29,40 +29,48 @@ db.ref("gameState").on("value", (snapshot) => {
     const root = document.getElementById("game-root");
     if (!root) return;
     
+    // 1. አሸናፊ ሲኖር "BINGO!" የሚለውን ጽሁፍ በጉልህ ያሳያል
     if (data.winner) {
         root.innerHTML = `
-            <div style="text-align:center; background:#1a1a2e; padding:20px; border-radius:20px; border: 2px solid #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.3);">
-                <h1 style="color:#ffd700; font-size:2.5rem; margin:0;">🎊 BINGO! 🎊</h1>
-                <div style="margin:15px 0;">
-                    <div style="background:#ffd700; color:#1a1a2e; padding:10px; border-radius:10px; display:inline-block; font-weight:bold;">
+            <div style="text-align:center; background:#1a1a2e; padding:30px; border-radius:25px; border: 4px solid #ffd700; box-shadow: 0 0 30px rgba(255,215,0,0.5); animation: pulse 2s infinite;">
+                <h1 style="color:#ffd700; font-size:3.5rem; margin:0; text-shadow: 2px 2px #000; letter-spacing: 5px;">BINGO!</h1>
+                <div style="margin:20px 0;">
+                    <div style="background:#ffd700; color:#1a1a2e; padding:12px 25px; border-radius:15px; display:inline-block; font-weight:bold; font-size:1.2rem;">
                         🏆 አሸናፊ: ${data.winnerName}
                     </div>
                 </div>
-                <p style="color:white; font-size:0.9rem;">አዲስ ጨዋታ በቅርቡ ይጀምራል...</p>
-                <div style="transform: scale(0.8);">${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}</div>
+                <p style="color:white; font-size:1.1rem; font-weight:lighter;">ቀጣይ ጨዋታ በ 30 ሰከንድ ውስጥ ይጀምራል...</p>
+                <div style="transform: scale(0.85); margin-top:10px;">${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}</div>
             </div>
+            <style>
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.02); }
+                    100% { transform: scale(1); }
+                }
+            </style>
         `;
         return;
     }
 
     if (data.status === "WAITING") {
-        restartTriggered = false; // ጨዋታው ሲጀምር መቆለፊያውን ፍታ
+        restartTriggered = false;
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
             const isTaken = !!(data.takenCards && data.takenCards[i]);
-            gridHTML += `<button onclick="generateBingoCard(${i}, ${isTaken})" style="width:38px; height:38px; margin:2px; border-radius:5px; border:none; background:${isTaken ? '#444' : '#1f4068'}; color:white; cursor:pointer;">${i}</button>`;
+            gridHTML += `<button onclick="generateBingoCard(${i}, ${isTaken})" style="width:38px; height:38px; margin:2px; border-radius:8px; border:none; background:${isTaken ? '#444' : '#1f4068'}; color:white; font-weight:bold; cursor:pointer; transition: 0.3s;">${i}</button>`;
         }
         root.innerHTML = `
-            <div style="text-align:center; color:#ffd700; margin-bottom:15px;">
-                <h3 style="margin:0;">${myFullCard.length > 0 ? "ተመዝግበዋል! ቆይ..." : "ካርድ ይምረጡ"}</h3>
-                <h1 style="font-size:3rem; margin:0;">⏱ ${data.timer}s</h1>
+            <div style="text-align:center; color:#ffd700; margin-bottom:20px;">
+                <h3 style="margin:0; opacity:0.8;">${myFullCard.length > 0 ? "ተመዝግበዋል! ቆይ..." : "ካርድ ይምረጡ"}</h3>
+                <h1 style="font-size:3.5rem; margin:0; font-family: sans-serif;">⏱ ${data.timer}s</h1>
             </div>
-            <div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:15px;">${gridHTML}</div>
         `;
     } else {
         const calledNumbers = data.calledNumbers || [];
         
-        // አውቶማቲክ አሸናፊ ቼክ
+        // አሸናፊ ቼክ - አሸናፊ ሲኖር ዳታቤዙን ያድሳል
         if (myFullCard.length > 0 && !data.winner && checkWin(myFullCard, calledNumbers)) {
             db.ref("gameState").update({ 
                 winner: userId, 
@@ -70,7 +78,6 @@ db.ref("gameState").on("value", (snapshot) => {
                 winnerCard: myFullCard 
             });
             
-            // አሸናፊው ከተገኘ ከ30 ሰከንድ በኋላ አዲስ ጨዋታ እንዲጀምር
             setTimeout(() => {
                 if (!restartTriggered) {
                     restartTriggered = true;
@@ -80,25 +87,32 @@ db.ref("gameState").on("value", (snapshot) => {
         }
 
         root.innerHTML = `
-            <div style="text-align:center; margin-bottom:15px;">
-                <div style="background:#ffd700; color:#1a1a2e; width:90px; height:90px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2rem; font-weight:bold; margin:0 auto; border:4px solid #fff;">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="background:#ffd700; color:#1a1a2e; width:100px; height:100px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2.2rem; font-weight:bold; margin:0 auto; border:5px solid #fff; box-shadow: 0 0 20px rgba(255,215,0,0.4);">
                     ${data.currentNum || "..."}
                 </div>
             </div>
-            ${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:white;"><h2>WATCHING ONLY</h2></div>`}
+            ${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:white; padding:40px; background:rgba(0,0,0,0.2); border-radius:20px;"><h2>WATCHING ONLY</h2><p>ቀጣዩን ዙር ይጠብቁ</p></div>`}
         `;
     }
 });
 
 function renderBingoGrid(card, called) {
     if (!card) return "";
+    const letters = ['B', 'I', 'N', 'G', 'O'];
     let gridHTML = "";
     for (let i = 0; i < 25; i++) {
         let num = card[i];
         const isHit = called.includes(num) || num === "FREE";
-        gridHTML += `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:45px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:5px;">${num}</div>`;
+        gridHTML += `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:45px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px; font-size:1.2rem; transition: 0.5s;">${num}</div>`;
     }
-    return `<div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; background:white; padding:10px; border-radius:10px;">${gridHTML}</div>`;
+    return `
+        <div style="background:white; padding:12px; border-radius:18px; width:100%; max-width:320px; margin:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <div style="display:grid; grid-template-columns:repeat(5, 1fr); margin-bottom:10px;">
+                ${letters.map(l => `<div style="color:#1a1a2e; font-weight:900; text-align:center; font-size:1.3rem;">${l}</div>`).join('')}
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;">${gridHTML}</div>
+        </div>`;
 }
 
 function checkWin(card, called) {
@@ -127,7 +141,7 @@ function getRange(min, max, count) {
 
 function startTimer() {
     let t = 30;
-    db.ref("players").remove(); // የድሮ ተጫዋቾችን ማጽዳት
+    db.ref("players").remove(); 
     db.ref("gameState").set({ status: "WAITING", timer: t, takenCards: {}, calledNumbers: [], winner: null });
     const timer = setInterval(() => {
         t--;
@@ -141,7 +155,10 @@ function callNumbers() {
     let called = [];
     let gameInterval = setInterval(() => {
         db.ref("gameState/winner").once("value", (s) => {
-            if (s.exists() || pool.length === 0) { clearInterval(gameInterval); return; }
+            if (s.exists() || pool.length === 0) { 
+                clearInterval(gameInterval); 
+                return; 
+            }
             let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
             let l = (n <= 15) ? "B" : (n <= 30) ? "I" : (n <= 45) ? "N" : (n <= 60) ? "G" : "O";
             called.push(n);
