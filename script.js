@@ -11,7 +11,6 @@ const firebaseConfig = {
 if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.database();
 
-// የቴሌግራም መረጃ ለማግኘት መሞከር፣ ካልተገኘ በራንደም መታወቂያ መስጠት
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) tg.expand();
 
@@ -19,11 +18,14 @@ const user = tg?.initDataUnsafe?.user || { id: "guest_" + Math.floor(Math.random
 const userId = user.id;
 
 let myFullCard = []; 
-let gameInterval;
 
-// ካርድ ቀድሞ ተመርጦ እንደሆነ ቼክ ማድረግ
-db.ref(`players/${userId}`).once("value", (snapshot) => {
-    if (snapshot.exists()) { myFullCard = snapshot.val().card; }
+// የተጠቃሚውን ካርድ ከመረጃ ቋት መፈለግ
+db.ref(`players/${userId}`).on("value", (snapshot) => {
+    if (snapshot.exists()) {
+        myFullCard = snapshot.val().card;
+    } else {
+        myFullCard = [];
+    }
 });
 
 db.ref("gameState").on("value", (snapshot) => {
@@ -31,7 +33,7 @@ db.ref("gameState").on("value", (snapshot) => {
     const root = document.getElementById("game-root");
     if (!root) return;
     
-    // አሸናፊ ካለ
+    // 1. አሸናፊ ካለ መጀመሪያ እሱን ማሳየት
     if (data.winner) {
         root.innerHTML = `
             <div style="text-align:center; color:#ffd700; padding:20px;">
@@ -39,11 +41,11 @@ db.ref("gameState").on("value", (snapshot) => {
                 <h3>አሸናፊ: ${data.winnerName}</h3>
                 <button onclick="location.reload()" style="background:#e94560; color:white; border:none; padding:10px 20px; border-radius:10px; margin-top:10px;">አዲስ ጀምር</button>
             </div>
-            <div class="bingo-card-5x5">${renderBingoGrid(myFullCard, data.calledNumbers || [])}</div>
         `;
         return;
     }
 
+    // 2. ተጫዋቾች ካርድ የሚመርጡበት ሰዓት (WAITING)
     if (data.status === "WAITING") {
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
@@ -52,31 +54,50 @@ db.ref("gameState").on("value", (snapshot) => {
         }
         root.innerHTML = `
             <div style="margin-bottom:15px; color:#ffd700; text-align:center;">
-                <h3>${myFullCard.length > 0 ? "ተዘጋጅተዋል..." : "ቁጥር በመንካት ካርድ ይምረጡ"}</h3>
-                <h2>⏱ ${data.timer}s</h2>
+                <h3>${myFullCard.length > 0 ? "ተመዝግበዋል! ጨዋታው እስኪጀምር ይጠብቁ..." : "ቁጥር በመንካት ካርድ ይምረጡ"}</h3>
+                <h2 style="font-size:2rem;">⏱ ${data.timer}s</h2>
             </div>
             <div class="grid-container">${gridHTML}</div>
-            ${myFullCard.length > 0 ? `<div class="bingo-card-5x5">${renderBingoGrid(myFullCard, [])}</div>` : ""}
         `;
-    } else {
+    } 
+    // 3. ጨዋታው ሲጀመር (PLAYING)
+    else {
         const calledNumbers = data.calledNumbers || [];
         
-        if (myFullCard.length > 0 && checkWin(myFullCard, calledNumbers)) {
-            db.ref("gameState").update({ winner: userId, winnerName: user.first_name });
-        }
+        // ሀ. ተጫዋቹ ካርድ ካለው - የራሱን ካርድ ያያል
+        if (myFullCard.length > 0) {
+            if (checkWin(myFullCard, calledNumbers)) {
+                db.ref("gameState").update({ winner: userId, winnerName: user.first_name });
+            }
 
-        root.innerHTML = `
-            <div style="text-align:center; margin-bottom:10px; color:white;">ተጫዋች: ${user.first_name}</div>
-            <div class="number-display-box">
-                <div class="bingo-ball-call">${data.currentNum || "..."}</div>
-            </div>
-            <div class="bingo-card-5x5">${renderBingoGrid(myFullCard, calledNumbers)}</div>
-        `;
+            root.innerHTML = `
+                <div style="text-align:center; margin-bottom:10px; color:white;">ተጫዋች: ${user.first_name}</div>
+                <div class="number-display-box">
+                    <div class="bingo-ball-call">${data.currentNum || "..."}</div>
+                </div>
+                <div class="bingo-card-5x5">${renderBingoGrid(myFullCard, calledNumbers)}</div>
+            `;
+        } 
+        // ለ. ተጫዋቹ ካርድ ካልመረጠ - "WATCHING ONLY" እይታ ያያል
+        else {
+            root.innerHTML = `
+                <div style="text-align:center; padding:20px; color:white; background:rgba(0,0,0,0.5); border-radius:15px;">
+                    <h2 style="color:#e94560;">WATCHING ONLY</h2>
+                    <p>ይህ ዙር አልፎዎታል:: ቀጣዩ እስኪጀምር እዚህ ይቆዩ::</p>
+                    <div class="number-display-box" style="margin:20px auto;">
+                        <div class="bingo-ball-call" style="font-size:2rem;">${data.currentNum || "..."}</div>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; opacity:0.6;">
+                        ${calledNumbers.slice(-10).map(n => `<div style="background:#1f4068; padding:5px 10px; border-radius:50%; font-size:0.8rem;">${n}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
     }
 });
 
+// የቀሩት ተግባራት (RenderGrid, CheckWin, etc.) ተመሳሳይ ናቸው...
 function renderBingoGrid(card, called) {
-    if (!card || card.length === 0) return "";
     const letters = ['B', 'I', 'N', 'G', 'O'];
     let gridHTML = "";
     for (let row = 0; row < 5; row++) {
@@ -90,11 +111,7 @@ function renderBingoGrid(card, called) {
 }
 
 function checkWin(card, called) {
-    const p = [
-        [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24],
-        [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24],
-        [0,6,12,18,24], [4,8,12,16,20]
-    ];
+    const p = [[0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24], [0,6,12,18,24], [4,8,12,16,20]];
     return p.some(a => a.every(i => called.includes(card[i]) || card[i] === "FREE"));
 }
 
@@ -130,7 +147,7 @@ function startTimer() {
 function callNumbers() {
     let pool = Array.from({length: 75}, (_, i) => i + 1);
     let called = [];
-    gameInterval = setInterval(() => {
+    let gameInterval = setInterval(() => {
         db.ref("gameState/winner").once("value", (s) => {
             if (s.exists() || pool.length === 0) { clearInterval(gameInterval); return; }
             let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
