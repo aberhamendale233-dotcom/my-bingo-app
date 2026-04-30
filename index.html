@@ -1,26 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>win BINGO LIVE</title>
-  
-<link rel="stylesheet" href="style.css">
+    <title>win BINGO LIVE</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ዋናው የጨዋታ ቦታ -->
+    <div id="game-root"></div>
 
-<div class="top-bar">
-  <div>👥 Players: <span id="players">0</span>/240</div>
-  
-<div>💰 Pot: <span id="pot">0</span> ETB</div>
-</div>
-
-<h1 class="title">🎯 win BINGO</h1>
-
-<div id="number" class="number">-</div>
-
-<div id="board" class="board"></div>
-
-<div id="leaderboard" class="leaderboard"></div>
-
-<script src="script.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
