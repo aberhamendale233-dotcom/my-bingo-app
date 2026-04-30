@@ -18,21 +18,25 @@ db.ref("gameState").on("value", (snapshot) => {
     if (!root) return;
     
     if (data.status === "WAITING") {
-        if (myFullCard.length === 0) {
-            let gridHTML = "";
-            for (let i = 1; i <= 80; i++) {
-                const isTaken = !!(data.takenCards && data.takenCards[i]);
-                gridHTML += `<button onclick="generateBingoCard(${i}, ${isTaken})" class="${isTaken ? 'taken' : ''}">${i}</button>`;
-            }
-            root.innerHTML = `<h2>🎰 ካርድ ይምረጡ 🎰</h2><div class="grid-container">${gridHTML}</div>`;
-        } else {
-            root.innerHTML = `
-                <h2>ተዘጋጅተዋል!</h2>
-                <p>ጨዋታው እስኪጀምር ይጠብቁ... (${data.timer}s)</p>
-                <div class="bingo-card-5x5">${renderBingoGrid(myFullCard, [])}</div>
-            `;
+        // የ 1-80 ምርጫዎች ሳይጠፉ እንዲቆዩ ተደርጓል
+        let gridHTML = "";
+        for (let i = 1; i <= 80; i++) {
+            const isTaken = !!(data.takenCards && data.takenCards[i]);
+            gridHTML += `<button onclick="generateBingoCard(${i}, ${isTaken})" class="${isTaken ? 'taken' : ''}">${i}</button>`;
         }
+        
+        // ቁጥር ስትመርጥ ከላይ መልዕክት እና ታይመሩን ያሳያል
+        let statusMsg = myFullCard.length > 0 
+            ? `<div style="margin-bottom:20px; color:#ffd700;"><h3>ተዘጋጅተዋል! ጨዋታው በ ${data.timer}s ይጀምራል...</h3></div>` 
+            : `<h2>🎰 ካርድ ይምረጡ 🎰</h2>`;
+
+        root.innerHTML = `
+            ${statusMsg}
+            <div class="grid-container">${gridHTML}</div>
+            ${myFullCard.length > 0 ? `<div class="bingo-card-5x5">${renderBingoGrid(myFullCard, [])}</div>` : ""}
+        `;
     } else {
+        // ታይመሩ ሲያልቅ (PLAYING ሲሆን) ምርጫዎቹ ጠፍተው ትልቁ ሳጥን ይመጣል
         const calledNumbers = data.calledNumbers || [];
         root.innerHTML = `
             <div class="number-display-box">
