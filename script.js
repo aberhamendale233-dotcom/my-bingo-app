@@ -24,30 +24,31 @@ db.ref(`players/${userId}`).on("value", (snapshot) => {
     myFullCard = snapshot.exists() ? snapshot.val().card : [];
 });
 
-// 2. ዋናው የጨዋታ ኢንጂን (UI Update)
+// 2. ዋናው የጨዋታ መቆጣጠሪያ
 db.ref("gameState").on("value", (snapshot) => {
     const data = snapshot.val() || { status: "WAITING", timer: 30 };
     const root = document.getElementById("game-root");
     if (!root) return;
     
-    // አሸናፊ ካለ ማሳያ
+    // *** አሸናፊ ሲኖር ለሁሉም ሰው የሚታየው ክፍል ***
     if (data.winner) {
         root.innerHTML = `
-            <div style="text-align:center; background:#1a1a2e; padding:30px; border-radius:25px; border: 4px solid #ffd700;">
-                <h1 style="color:#ffd700; font-size:3rem; margin:0;">BINGO!</h1>
+            <div style="text-align:center; background:#1a1a2e; padding:30px; border-radius:25px; border: 4px solid #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.4);">
+                <h1 style="color:#ffd700; font-size:3.5rem; margin:0; text-shadow: 2px 2px #000;">BINGO!</h1>
                 <div style="margin:20px 0;">
-                    <div style="background:#ffd700; color:#1a1a2e; padding:10px 20px; border-radius:10px; display:inline-block; font-weight:bold;">
+                    <div style="background:#ffd700; color:#1a1a2e; padding:12px 25px; border-radius:15px; display:inline-block; font-weight:bold; font-size:1.3rem;">
                         🏆 አሸናፊ: ${data.winnerName}
                     </div>
                 </div>
+                <p style="color:white; font-size:1.1rem; margin-bottom:15px;">የአሸናፊው ካርድ ይህንን ይመስላል፡</p>
                 <div style="transform: scale(0.85);">${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}</div>
-                <p style="color:white; margin-top:20px;">ጨዋታው ተጠናቋል:: አዲስ ጨዋታ ለመጀመር ካርድ ይምረጡ::</p>
+                <button onclick="db.ref('gameState').remove(); location.reload();" style="margin-top:25px; background:#ffd700; border:none; padding:12px 30px; border-radius:10px; font-weight:bold; cursor:pointer;">አዲስ ጨዋታ ጀምር</button>
             </div>
         `;
         return;
     }
 
-    // የምዝገባ ጊዜ (WAITING)
+    // WAITING ሁኔታ
     if (data.status === "WAITING") {
         let gridHTML = "";
         for (let i = 1; i <= 80; i++) {
@@ -59,14 +60,15 @@ db.ref("gameState").on("value", (snapshot) => {
                 <h3 style="margin:0;">${myFullCard.length > 0 ? "ተመዝግበዋል! ቆይ..." : "ካርድ ይምረጡ"}</h3>
                 <h1 style="font-size:3rem; margin:0;">⏱ ${data.timer}s</h1>
             </div>
-            <div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:15px;">${gridHTML}</div>
             ${myFullCard.length > 0 ? `<div style="margin-top:20px;">${renderBingoGrid(myFullCard, [])}</div>` : ""}
         `;
     } 
-    // የጨዋታ ጊዜ (PLAYING)
+    // PLAYING ሁኔታ
     else {
         const calledNumbers = data.calledNumbers || [];
         
+        // አሸናፊነትን ቼክ ማድረግ
         if (myFullCard.length > 0 && !data.winner && checkWin(myFullCard, calledNumbers)) {
             db.ref("gameState").update({ 
                 winner: userId, 
@@ -77,23 +79,22 @@ db.ref("gameState").on("value", (snapshot) => {
 
         root.innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
-                <div style="background:#ffd700; color:#1a1a2e; width:90px; height:90px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2rem; font-weight:bold; margin:0 auto; border:4px solid #fff;">
+                <div style="background:#ffd700; color:#1a1a2e; width:100px; height:100px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2.2rem; font-weight:bold; margin:0 auto; border:5px solid #fff; box-shadow: 0 0 15px rgba(255,215,0,0.3);">
                     ${data.currentNum || "..."}
                 </div>
             </div>
-            ${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:white; padding:40px;"><h2>በመጠባበቅ ላይ...</h2><p>ቀጣዩ ዙር ሲጀምር ካርድ ይምረጡ</p></div>`}
+            ${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:white; padding:40px; background:rgba(255,255,255,0.05); border-radius:20px;"><h2>በመጠባበቅ ላይ...</h2><p>ይህ ዙር እንዳለቀ ካርድ መምረጥ ይችላሉ</p></div>`}
         `;
     }
 });
 
-// ካርድ መምረጫ - እዚህ ጋር ነው ማንዋል የተደረገው
+// ካርድ መምረጫ
 window.generateBingoCard = function(n, taken) {
     if (taken || (myFullCard && myFullCard.length > 0)) return;
     
-    // አሸናፊ ካለ ወይም ጨዋታው ቆሞ ከሆነ አዲስ ጨዋታ ያስጀምራል
     db.ref("gameState").once("value", (snapshot) => {
         const data = snapshot.val();
-        if (!data || data.winner || data.status === "FINISHED") {
+        if (!data || data.winner || data.status === "FINISHED" || !data.status) {
             startTimer();
         }
     });
@@ -110,18 +111,14 @@ function renderBingoGrid(card, called) {
     if (!card || card.length === 0) return "";
     const letters = ['B', 'I', 'N', 'G', 'O'];
     let gridHTML = "";
-    for (let i = 0; i < 25; i++) {
-        let num = card[i];
-        const isHit = called.includes(num) || num === "FREE";
-        gridHTML += `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:45px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px; font-size:1.1rem;">${num}</div>`;
+    for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+            let num = card[col * 5 + row];
+            const isHit = called.includes(num) || num === "FREE";
+            gridHTML += `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:45px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px; font-size:1.1rem; border:1px solid rgba(0,0,0,0.1);">${num}</div>`;
+        }
     }
-    return `
-        <div style="background:white; padding:10px; border-radius:15px; width:100%; max-width:300px; margin:auto;">
-            <div style="display:grid; grid-template-columns:repeat(5, 1fr); margin-bottom:10px;">
-                ${letters.map(l => `<div style="color:#1a1a2e; font-weight:900; text-align:center;">${l}</div>`).join('')}
-            </div>
-            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:5px;">${gridHTML}</div>
-        </div>`;
+    return `<div style="background:white; padding:12px; border-radius:18px; width:100%; max-width:300px; margin:auto;"><div style="display:grid; grid-template-columns:repeat(5, 1fr); margin-bottom:10px;">${letters.map(l => `<div style="color:#1a1a2e; font-weight:900; text-align:center;">${l}</div>`).join('')}</div><div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:5px;">${gridHTML}</div></div>`;
 }
 
 function checkWin(card, called) {
@@ -141,21 +138,11 @@ function getRange(min, max, count) {
 function startTimer() {
     let t = 30;
     db.ref("players").remove(); 
-    db.ref("gameState").set({ 
-        status: "WAITING", 
-        timer: t, 
-        takenCards: {}, 
-        calledNumbers: [], 
-        winner: null
-    });
+    db.ref("gameState").set({ status: "WAITING", timer: t, takenCards: {}, calledNumbers: [], winner: null });
     const timer = setInterval(() => {
         t--;
         db.ref("gameState/timer").set(t);
-        if (t <= 0) { 
-            clearInterval(timer); 
-            db.ref("gameState/status").set("PLAYING"); 
-            callNumbers(); 
-        }
+        if (t <= 0) { clearInterval(timer); db.ref("gameState/status").set("PLAYING"); callNumbers(); }
     }, 1000);
 }
 
@@ -166,7 +153,6 @@ function callNumbers() {
         db.ref("gameState/winner").once("value", (s) => {
             if (s.exists() || pool.length === 0) { 
                 clearInterval(gameInterval); 
-                if (!s.exists()) db.ref("gameState").update({ status: "FINISHED" });
                 return; 
             }
             let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
