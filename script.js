@@ -30,18 +30,18 @@ db.ref("gameState").on("value", (snapshot) => {
     const root = document.getElementById("game-root");
     if (!root) return;
     
-    // አሸናፊ ካለ "BINGO!" ማሳያ
+    // አሸናፊ ካለ ማሳያ
     if (data.winner) {
         root.innerHTML = `
-            <div style="text-align:center; background:#1a1a2e; padding:30px; border-radius:25px; border: 4px solid #ffd700; box-shadow: 0 0 30px rgba(255,215,0,0.5);">
-                <h1 style="color:#ffd700; font-size:3.5rem; margin:0; font-family: 'Arial Black', sans-serif;">BINGO!</h1>
+            <div style="text-align:center; background:#1a1a2e; padding:30px; border-radius:25px; border: 4px solid #ffd700;">
+                <h1 style="color:#ffd700; font-size:3rem; margin:0;">BINGO!</h1>
                 <div style="margin:20px 0;">
-                    <div style="background:#ffd700; color:#1a1a2e; padding:12px 25px; border-radius:15px; display:inline-block; font-weight:bold; font-size:1.2rem;">
+                    <div style="background:#ffd700; color:#1a1a2e; padding:10px 20px; border-radius:10px; display:inline-block; font-weight:bold;">
                         🏆 አሸናፊ: ${data.winnerName}
                     </div>
                 </div>
-                <p style="color:white;">ቀጣይ ጨዋታ ከጥቂት ሰከንዶች በኋላ ይጀምራል...</p>
                 <div style="transform: scale(0.85);">${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}</div>
+                <p style="color:white; margin-top:20px;">ጨዋታው ተጠናቋል:: አዲስ ጨዋታ ለመጀመር ካርድ ይምረጡ::</p>
             </div>
         `;
         return;
@@ -57,9 +57,9 @@ db.ref("gameState").on("value", (snapshot) => {
         root.innerHTML = `
             <div style="text-align:center; color:#ffd700; margin-bottom:20px;">
                 <h3 style="margin:0;">${myFullCard.length > 0 ? "ተመዝግበዋል! ቆይ..." : "ካርድ ይምረጡ"}</h3>
-                <h1 style="font-size:3.5rem; margin:0;">⏱ ${data.timer}s</h1>
+                <h1 style="font-size:3rem; margin:0;">⏱ ${data.timer}s</h1>
             </div>
-            <div style="display:flex; flex-wrap:wrap; justify-content:center; background:rgba(255,255,255,0.05); padding:10px; border-radius:15px;">${gridHTML}</div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>
             ${myFullCard.length > 0 ? `<div style="margin-top:20px;">${renderBingoGrid(myFullCard, [])}</div>` : ""}
         `;
     } 
@@ -67,7 +67,6 @@ db.ref("gameState").on("value", (snapshot) => {
     else {
         const calledNumbers = data.calledNumbers || [];
         
-        // አሸናፊ ቼክ
         if (myFullCard.length > 0 && !data.winner && checkWin(myFullCard, calledNumbers)) {
             db.ref("gameState").update({ 
                 winner: userId, 
@@ -78,36 +77,26 @@ db.ref("gameState").on("value", (snapshot) => {
 
         root.innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
-                <div style="background:#ffd700; color:#1a1a2e; width:100px; height:100px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2.2rem; font-weight:bold; margin:0 auto; border:5px solid #fff;">
+                <div style="background:#ffd700; color:#1a1a2e; width:90px; height:90px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:2rem; font-weight:bold; margin:0 auto; border:4px solid #fff;">
                     ${data.currentNum || "..."}
                 </div>
             </div>
-            ${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:white; padding:40px;"><h2>WATCHING</h2><p>ቀጣዩን ዙር ይጠብቁ</p></div>`}
+            ${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:white; padding:40px;"><h2>በመጠባበቅ ላይ...</h2><p>ቀጣዩ ዙር ሲጀምር ካርድ ይምረጡ</p></div>`}
         `;
     }
 });
 
-// 3. Auto-Play Engine (ጨዋታው እንዳይቆም የሚያደርግ)
-setInterval(() => {
-    db.ref("gameState").once("value", (snapshot) => {
-        const data = snapshot.val();
-        if (!data || data.status === "FINISHED" || (data.winner && !data.isRestarting)) {
-            if (data && data.winner) {
-                db.ref("gameState").update({ isRestarting: true });
-                setTimeout(startTimer, 15000); // አሸናፊው ለ15 ሰከንድ እንዲታይ
-            } else {
-                startTimer();
-            }
-        }
-    });
-}, 5000);
-
-// ካርድ መምረጫ
+// ካርድ መምረጫ - እዚህ ጋር ነው ማንዋል የተደረገው
 window.generateBingoCard = function(n, taken) {
     if (taken || (myFullCard && myFullCard.length > 0)) return;
     
-    const btn = event.target;
-    btn.innerText = "⏳";
+    // አሸናፊ ካለ ወይም ጨዋታው ቆሞ ከሆነ አዲስ ጨዋታ ያስጀምራል
+    db.ref("gameState").once("value", (snapshot) => {
+        const data = snapshot.val();
+        if (!data || data.winner || data.status === "FINISHED") {
+            startTimer();
+        }
+    });
 
     let b = getRange(1, 15, 5), i = getRange(16, 30, 5), n_c = getRange(31, 45, 4), g = getRange(46, 60, 5), o = getRange(61, 75, 5);
     n_c.splice(2, 0, "FREE"); 
@@ -124,10 +113,10 @@ function renderBingoGrid(card, called) {
     for (let i = 0; i < 25; i++) {
         let num = card[i];
         const isHit = called.includes(num) || num === "FREE";
-        gridHTML += `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:45px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px; font-size:1.1rem; border:1px solid rgba(0,0,0,0.1);">${num}</div>`;
+        gridHTML += `<div style="background:${isHit ? '#e94560' : '#1f4068'}; color:white; height:45px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px; font-size:1.1rem;">${num}</div>`;
     }
     return `
-        <div style="background:white; padding:12px; border-radius:18px; width:100%; max-width:300px; margin:auto;">
+        <div style="background:white; padding:10px; border-radius:15px; width:100%; max-width:300px; margin:auto;">
             <div style="display:grid; grid-template-columns:repeat(5, 1fr); margin-bottom:10px;">
                 ${letters.map(l => `<div style="color:#1a1a2e; font-weight:900; text-align:center;">${l}</div>`).join('')}
             </div>
@@ -157,8 +146,7 @@ function startTimer() {
         timer: t, 
         takenCards: {}, 
         calledNumbers: [], 
-        winner: null,
-        isRestarting: false 
+        winner: null
     });
     const timer = setInterval(() => {
         t--;
