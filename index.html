@@ -3,60 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIL BINGO</title>
+    <title>WIN BINGO</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- የላይኛው ክፍል (Header) -->
         <header>
-            <h1 class="logo">DIL BINGO</h1>
             <button class="rules-btn">Rules</button>
         </header>
 
-        <!-- ዋናው የጨዋታ መግቢያ (Hero Section) -->
         <main class="main-content">
-            <div class="welcome-text">
-                <p>Welcome to</p>
-                <h2 class="title">DIL BINGO</h2>
+            <div class="welcome-section">
+                <p class="welcome-text">Welcome to</p>
+                <h1 class="main-logo">WIN BINGO</h1>
             </div>
 
             <div class="stake-card">
-                <p class="stake-label">CHOOSE YOUR STAKE</p>
-                <div class="divider"></div>
+                <p class="stake-title">CHOOSE YOUR STAKE</p>
+                <div class="glow-divider"></div>
                 
                 <button id="play-btn" class="play-button">
-                    <span class="play-icon">▶</span> PLAY 10
+                    <span class="icon-play">▶</span> PLAY 10
                 </button>
 
-                <div class="wallet-info">
-                    <p>WALLET BALANCE</p>
-                    <h3 id="balance">6</h3>
+                <div class="wallet-section">
+                    <p class="wallet-label">WALLET BALANCE</p>
+                    <h2 id="balance" class="balance-amount">6</h2>
                 </div>
             </div>
         </main>
 
-        <!-- የታችኛው ሜኑ (Bottom Navigation) -->
         <nav class="bottom-nav">
             <div class="nav-item active">
-                <div class="icon">🎮</div>
-                <span>GAME</span>
+                <span class="nav-icon">🎮</span>
+                <span class="nav-text">GAME</span>
             </div>
             <div class="nav-item">
-                <div class="icon">🏆</div>
-                <span>SCORES</span>
+                <span class="nav-icon">🏆</span>
+                <span class="nav-text">SCORES</span>
             </div>
             <div class="nav-item">
-                <div class="icon">🕒</div>
-                <span>HISTORY</span>
+                <span class="nav-icon">🕒</span>
+                <span class="nav-text">HISTORY</span>
             </div>
             <div class="nav-item">
-                <div class="icon">💼</div>
-                <span>WALLET</span>
+                <span class="nav-icon">💼</span>
+                <span class="nav-text">WALLET</span>
             </div>
             <div class="nav-item">
-                <div class="icon">👤</div>
-                <span>PROFILE</span>
+                <span class="nav-icon">👤</span>
+                <span class="nav-text">PROFILE</span>
             </div>
         </nav>
     </div>
