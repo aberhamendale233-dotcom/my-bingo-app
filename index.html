@@ -1,1 +1,157 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win Bingo | ቢንጎ ጨዋታ</title>
+    <style>
+        :root {
+            --primary-color: #ffcc00;
+            --secondary-color: #333;
+            --bg-color: #1a1a1a;
+            --text-color: #fff;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 2px solid var(--primary-color);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .bingo-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-gap: 10px;
+            margin: 20px 0;
+            background: #444;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            background: #eee;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .cell:hover {
+            background: var(--primary-color);
+        }
+
+        .cell.marked {
+            background: #ff4444;
+            color: white;
+            text-decoration: line-through;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            background: var(--primary-color);
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #e6b800;
+            transform: scale(1.05);
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>WIN BINGO</h1>
+        
+        <div id="status-msg" class="status">አዲስ ካርድ ለማግኘት "ካርድ አውጣ" የሚለውን ይጫኑ</div>
+
+        <div class="bingo-grid" id="bingo-board">
+            <!-- ካርዱ እዚህ ጋር በጃቫ ስክሪፕት ይፈጠራል -->
+        </div>
+
+        <div class="controls">
+            <button onclick="generateCard()">አዲስ ካርድ አውጣ</button>
+        </div>
+    </div>
+
+    <script>
+        function generateCard() {
+            const board = document.getElementById('bingo-board');
+            board.innerHTML = '';
+            const status = document.getElementById('status-msg');
+            status.innerText = "ጨዋታው ተጀምሯል!";
+
+            // ለቢንጎ የሚሆኑ 25 የዘፈቀደ ቁጥሮች (1-75)
+            let nums = [];
+            while(nums.length < 25) {
+                let r = Math.floor(Math.random() * 75) + 1;
+                if(nums.indexOf(r) === -1) nums.push(r);
+            }
+
+            nums.forEach((num, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                
+                // መካከለኛውን ክፍል "FREE" ማድረግ
+                if(index === 12) {
+                    cell.innerText = 'FREE';
+                    cell.classList.add('marked');
+                } else {
+                    cell.innerText = num;
+                    cell.onclick = function() {
+                        this.classList.toggle('marked');
+                    };
+                }
+                
+                board.appendChild(cell);
+            });
+        }
+
+        // ገጹ ሲከፈት ወዲያው ካርድ እንዲያመጣ
+        window.onload = generateCard;
+    </script>
+</body>
+</html>
