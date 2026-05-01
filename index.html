@@ -3,31 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win Bingo - Final Fix</title>
+    <title>Win Bingo - Manual Selection</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background-color: #1a1a2e; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; display: flex; justify-content: center; }
         #game-root { width: 100%; max-width: 400px; position: relative; }
-        .num-circle { background: #ffd700; color: #1a1a2e; width: 85px; height: 85px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 15px auto; border: 4px solid #fff; box-shadow: 0 0 15px rgba(255,215,0,0.3); }
         
-        /* የድምፅ ቁልፍ */
-        #mute-btn { position: absolute; top: 5px; right: 5px; background: rgba(255,255,255,0.2); border: none; color: white; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; font-size: 1.3rem; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .num-circle { background: #ffd700; color: #1a1a2e; width: 80px; height: 80px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2rem; font-weight: 900; margin: 15px auto; border: 4px solid #fff; }
         
-        /* የካርዱ ራስጌ (B I N G O) */
-        .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 8px; text-align: center; font-weight: 900; font-size: 1.4rem; color: #1a1a2e; }
-        .bingo-letter { background: #ffd700; padding: 6px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
-        .grid-container { background: white; padding: 12px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); margin: 0 auto; width: 90%; }
+        .grid-container { background: white; padding: 12px; border-radius: 18px; margin: 0 auto; width: 90%; }
         .grid-cells { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .cell { color: white; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 6px; font-weight: bold; font-size: 1.1rem; transition: background 0.3s; }
+        .cell { color: white; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 6px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+        
+        /* ቁጥር መምረጫ ስክሪን */
+        .selection-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; background: #16213e; padding: 10px; border-radius: 10px; max-height: 300px; overflow-y: auto; }
+        .sel-box { padding: 8px 2px; background: #0f3460; text-align: center; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        .sel-box.active { background: #ffd700; color: #1a1a2e; font-weight: bold; }
+        
+        .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 8px; text-align: center; font-weight: 900; color: #1a1a2e; }
+        .bingo-letter { background: #ffd700; padding: 5px 0; border-radius: 5px; }
     </style>
 </head>
 <body>
 
     <div id="game-root">
-        <button id="mute-btn" onclick="toggleMute()">🔊</button>
         <div id="content"></div>
     </div>
 
@@ -47,83 +48,85 @@
         const tg = window.Telegram?.WebApp;
         if (tg) { tg.expand(); tg.ready(); }
 
-        const user = tg?.initDataUnsafe?.user || { id: "user_" + Math.floor(Math.random()*1000), first_name: "ተጫዋች" };
-        let myFullCard = []; 
-        let isMuted = false;
-        let lastNum = "";
+        const user = tg?.initDataUnsafe?.user || { id: "user_test", first_name: "ተጫዋች" };
+        let selectedNumbers = [];
 
-        window.toggleMute = function() {
-            isMuted = !isMuted;
-            document.getElementById("mute-btn").innerText = isMuted ? "🔇" : "🔊";
-        };
-
-        const amharicLabels = { "B":"ቢ", "I":"አይ", "N":"ኤን", "G":"ጂ", "O":"ኦ" };
-        const amharicNumbers = { 1:"አንድ", 2:"ሁለት", 3:"ሦስት", 4:"አራት", 5:"አምስት", 6:"ስድስት", 7:"ሰባት", 8:"ስምንት", 9:"ዘጠኝ", 10:"አስር", 11:"አስራ አንድ", 12:"አስራ ሁለት", 13:"አስራ ሦስት", 14:"አስራ አራት", 15:"አስራ አምስት", 16:"አስራ ስድስት", 17:"አስራ ሰባት", 18:"አስራ ስምንት", 19:"አስራ ዘጠኝ", 20:"ሃያ", 21:"ሃያ አንድ", 22:"ሃያ ሁለት", 23:"ሃያ ሦስት", 24:"ሃያ አራት", 25:"ሃያ አምስት", 26:"ሃያ ስድስት", 27:"ሃያ ሰባት", 28:"ሃያ ስምንት", 29:"ሃያ ዘጠኝ", 30:"ሰላሳ", 31:"ሰላሳ አንድ", 32:"ሰላሳ ሁለት", 33:"ሰላሳ ሦስት", 34:"ሰላሳ አራት", 35:"ሰላሳ አምስት", 36:"ሰላሳ ስድስት", 37:"ሰላሳ ሰባት", 38:"ሰላሳ ስምንት", 39:"ሰላሳ ዘጠኝ", 40:"አርባ", 41:"አርባ አንድ", 42:"አርባ ሁለት", 43:"አርባ ሦስት", 44:"አርባ አራት", 45:"አርባ አምስት", 46:"አርባ ስድስት", 47:"አርባ ሰባት", 48:"አርባ ስምንት", 49:"አርባ ዘጠኝ", 50:"ሃምሳ", 51:"ሃምሳ አንድ", 52:"ሃምሳ ሁለት", 53:"ሃምሳ ሦስት", 54:"ሃምሳ አራት", 55:"ሃምሳ አምስት", 56:"ሃምሳ ስድስት", 57:"ሃምሳ ሰባት", 58:"ሃምሳ ስምንት", 59:"ሃምሳ ዘጠኝ", 60:"ስድሳ", 61:"ስድሳ አንድ", 62:"ስድሳ ሁለት", 63:"ስድሳ ሦስት", 64:"ስድሳ አራት", 65:"ስድሳ አምስት", 66:"ስድሳ ስድስት", 67:"ስድሳ ሰባት", 68:"ስድሳ ስምንት", 69:"ስድሳ ዘጠኝ", 70:"ሰባ", 71:"ሰባ አንድ", 72:"ሰባ ሁለት", 73:"ሰባ ሦስት", 74:"ሰባ አራት", 75:"ሰባ አምስት" };
-
-        function speak(text) {
-            if (isMuted || !('speechSynthesis' in window)) return;
-            const p = text.split("-");
-            const msg = new SpeechSynthesisUtterance(`${amharicLabels[p[0]] || p[0]}... ${amharicNumbers[parseInt(p[1])] || p[1]}`);
-            msg.lang = 'am-ET';
-            msg.rate = 0.9;
-            window.speechSynthesis.speak(msg);
-        }
-
+        // ጨዋታውን መከታተል
         db.ref("gameState").on("value", (snap) => {
-            const data = snap.val() || { status: "IDLE" };
-            const root = document.getElementById("content");
-            
-            if (data.status === "PLAYING") {
-                if (data.currentNum && data.currentNum !== lastNum) {
-                    lastNum = data.currentNum;
-                    speak(lastNum);
-                }
-                root.innerHTML = `
-                    <div style="text-align:center;">
-                        <div class="num-circle">${data.currentNum || "..." }</div>
-                        ${renderGrid(myFullCard, data.calledNumbers || [])}
-                    </div>`;
-            } else {
-                root.innerHTML = `
-                    <div style="text-align:center; margin-top:50px;">
-                        <h3 style="color:#ffd700;">ጨዋታውን ለመጀመር ካርድ ይውሰዱ</h3>
-                        <button onclick="takeCard()" style="padding:18px 40px; background:#ffd700; border:none; border-radius:12px; font-weight:900; font-size:1.1rem; cursor:pointer; color:#1a1a2e; box-shadow:0 5px 15px rgba(0,0,0,0.3);">ካርድ ውሰድ</button>
-                    </div>`;
+            const data = snap.val();
+            if (data && data.status === "PLAYING" && selectedNumbers.length === 24) {
+                renderGame(data);
+            } else if (selectedNumbers.length < 24) {
+                renderSelection();
             }
         });
 
-        window.takeCard = function() {
-            let b=range(1,15,5), i=range(16,30,5), n=range(31,45,4), g=range(46,60,5), o=range(61,75,5);
-            n.splice(2,0,"FREE");
-            myFullCard = [...b,...i,...n,...g,...o];
-            db.ref("gameState").update({ status: "PLAYING" }); 
-            db.ref(`players/${user.id}`).set({ name: user.first_name, card: myFullCard });
-        };
-
-        function renderGrid(card, called) {
-            if (!card || card.length === 0) return `<p style="color:#888;">ተመልካች ነዎት</p>`;
-            let cells = "";
-            for(let r=0; r<5; r++) {
-                for(let c=0; c<5; c++) {
-                    let val = card[c*5+r];
-                    let hit = called.includes(val) || val === "FREE";
-                    cells += `<div class="cell" style="background:${hit?'#e94560':'#1f4068'};">${val}</div>`;
-                }
+        // ቁጥር መምረጫ UI
+        function renderSelection() {
+            let boxes = "";
+            for (let i = 1; i <= 80; i++) {
+                const isActive = selectedNumbers.includes(i);
+                boxes += `<div class="sel-box ${isActive?'active':''}" onclick="toggleNum(${i})">${i}</div>`;
             }
-            return `
-                <div class="grid-container">
-                    <div class="bingo-header">
-                        <div class="bingo-letter">B</div><div class="bingo-letter">I</div>
-                        <div class="bingo-letter">N</div><div class="bingo-letter">G</div>
-                        <div class="bingo-letter">O</div>
-                    </div>
-                    <div class="grid-cells">${cells}</div>
+            document.getElementById("content").innerHTML = `
+                <div style="text-align:center;">
+                    <h3 style="color:#ffd700;">24 ቁጥሮችን ይምረጡ (${selectedNumbers.length}/24)</h3>
+                    <div class="selection-grid">${boxes}</div>
+                    <button id="start-btn" onclick="confirmCard()" style="margin-top:20px; padding:15px; width:100%; border-radius:10px; background:${selectedNumbers.length===24?'#ffd700':'#555'}; border:none; font-weight:bold;" ${selectedNumbers.length!==24?'disabled':''}>ካርዱን አረጋግጥ</button>
                 </div>`;
         }
 
-        function range(min, max, count) {
-            let a=[]; while(a.length<count){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!a.includes(r)) a.push(r); }
-            return a.sort((x,y)=>x-y);
+        window.toggleNum = function(n) {
+            if (selectedNumbers.includes(n)) {
+                selectedNumbers = selectedNumbers.filter(x => x !== n);
+            } else {
+                if (selectedNumbers.length < 24) selectedNumbers.push(n);
+            }
+            renderSelection();
+        };
+
+        window.confirmCard = function() {
+            selectedNumbers.sort((a, b) => a - b);
+            // FREE space መጨመር
+            let finalCard = [...selectedNumbers];
+            finalCard.splice(12, 0, "FREE"); 
+            
+            db.ref(`players/${user.id}`).set({ 
+                name: user.first_name, 
+                card: finalCard 
+            }).then(() => {
+                alert("ካርድዎ ተመዝግቧል! ጨዋታው ሲጀመር ይጠብቁ።");
+            });
+        };
+
+        function renderGame(data) {
+            const root = document.getElementById("content");
+            let cells = "";
+            const called = data.calledNumbers || [];
+            
+            db.ref(`players/${user.id}/card`).once("value", (snap) => {
+                const card = snap.val() || [];
+                if (card.length === 0) return;
+
+                for(let i=0; i<25; i++) {
+                    let val = card[i];
+                    let hit = called.includes(val) || val === "FREE";
+                    cells += `<div class="cell" style="background:${hit?'#e94560':'#1f4068'};">${val}</div>`;
+                }
+
+                root.innerHTML = `
+                    <div style="text-align:center;">
+                        <div class="num-circle">${data.currentNum || "..." }</div>
+                        <div class="grid-container">
+                            <div class="bingo-header">
+                                <div class="bingo-letter">B</div><div class="bingo-letter">I</div>
+                                <div class="bingo-letter">N</div><div class="bingo-letter">G</div>
+                                <div class="bingo-letter">O</div>
+                            </div>
+                            <div class="grid-cells">${cells}</div>
+                        </div>
+                    </div>`;
+            });
         }
     </script>
 </body>
