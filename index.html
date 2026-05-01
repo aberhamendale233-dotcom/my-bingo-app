@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win Bingo - Full Amharic Voice & Mute</title>
+    <title>Win Bingo - Auto Reset</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -13,8 +13,6 @@
         .num-circle { background: #ffd700; color: #1a1a2e; width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 0 auto; border: 5px solid #fff; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
         #mute-btn { position: absolute; top: 0; right: 0; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; z-index: 100; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
         .bingo-title { color: #ffd700; text-align: center; font-size: 2.5rem; margin-top: 0; text-shadow: 2px 2px #000; }
-        
-        /* አዲስ የተጨመረ - የቢንጎ ፊደላት ስታይል */
         .bingo-letters-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 5px; text-align: center; font-weight: 900; color: #1a1a2e; }
         .letter-box { background: #ffd700; padding: 5px 0; border-radius: 5px; font-size: 1.2rem; }
     </style>
@@ -47,6 +45,7 @@
         let myFullCard = []; 
         let lastCalledNum = ""; 
         let isMuted = false;
+        let resetTriggered = false;
 
         window.toggleMute = function() {
             isMuted = !isMuted;
@@ -63,6 +62,7 @@
             61:"ስድሳ አንድ", 62:"ስድሳ ሁለት", 63:"ስድሳ ሦስት", 64:"ስድሳ አራት", 65:"ስድሳ አምስት", 66:"ስድሳ ስድስት", 67:"ስድሳ ሰባት", 68:"ስድሳ ስምንት", 69:"ስድሳ ዘጠኝ", 70:"ሰባ",
             71:"ሰባ አንድ", 72:"ሰባ ሁለት", 73:"ሰባ ሦስት", 74:"ሰባ አራት", 75:"ሰባ አምስት"
         };
+
         const amharicLetters = { "B":"ቢ", "I":"አይ", "N":"ኤን", "G":"ጂ", "O":"ኦ" };
 
         function speakBingo(text) {
@@ -85,7 +85,25 @@
                     <h1 class="bingo-title">🎊 BINGO! 🎊</h1>
                     <div style="background:#ffd700; color:#1a1a2e; padding:12px; border-radius:50px; font-weight:900; margin:15px 0;">አሸናፊ፡ ${data.winnerName}</div>
                     ${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}
+                    <p style="color:#ffd700; margin-top:10px;">በ 3 ሰከንድ ውስጥ ይመለሳል...</p>
                 </div>`;
+
+                // አሸናፊው ሲታወቅ ስርዓቱን Reset የማድረግ ስራ
+                if (!resetTriggered) {
+                    resetTriggered = true;
+                    setTimeout(() => {
+                        db.ref("gameState").set({
+                            status: "IDLE",
+                            timer: 30,
+                            winner: null,
+                            calledNumbers: [],
+                            takenCards: {},
+                            currentNum: ""
+                        });
+                        myFullCard = []; // የግል ካርድንም ያጠፋዋል
+                        resetTriggered = false;
+                    }, 3000); // 3 ሰከንድ ቆይታ
+                }
                 return;
             }
 
@@ -138,13 +156,10 @@
         }
 
         function renderBingoGrid(card, called) {
-            // ከላይ የቢንጎ ፊደላትን ለመጨመር
             let header = `
                 <div class="bingo-letters-header">
-                    <div class="letter-box">B</div>
-                    <div class="letter-box">I</div>
-                    <div class="letter-box">N</div>
-                    <div class="letter-box">G</div>
+                    <div class="letter-box">B</div><div class="letter-box">I</div>
+                    <div class="letter-box">N</div><div class="letter-box">G</div>
                     <div class="letter-box">O</div>
                 </div>`;
             
