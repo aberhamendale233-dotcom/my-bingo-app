@@ -1,20 +1,20 @@
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
-const dotenv = require('dotenv');
 
-dotenv.config();
 const app = express();
 const PORT = 3000;
 
+// ዳታቤዙን ማገናኘት
 const db = new sqlite3.Database('./bingo.db', (err) => {
-    if (err) console.error("Database error:", err.message);
-    else console.log("Connected to bingo.db");
+    if (err) console.error("Database connection error:", err.message);
+    else console.log("Connected to bingo.db database.");
 });
 
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// የገንዘብ መጠን ለማየት
 app.get('/api/balance/:userId', (req, res) => {
     const userId = req.params.userId;
     db.get("SELECT balance FROM users WHERE id = ?", [userId], (err, row) => {
@@ -23,20 +23,7 @@ app.get('/api/balance/:userId', (req, res) => {
     });
 });
 
-app.post('/api/play', (req, res) => {
-    const { userId } = req.body;
-    db.get("SELECT balance FROM users WHERE id = ?", [userId], (err, row) => {
-        if (row && row.balance >= 10) {
-            const newBalance = row.balance - 10;
-            db.run("UPDATE users SET balance = ? WHERE id = ?", [newBalance, userId], () => {
-                res.json({ success: true, newBalance: newBalance });
-            });
-        } else {
-            res.json({ success: false, message: "በቂ ሂሳብ የሎትም!" });
-        }
-    });
-});
-
+// ሰርቨሩን ማስነሳት
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server is running at http://localhost:${PORT}`);
 });
