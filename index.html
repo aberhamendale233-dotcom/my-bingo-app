@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win Bingo - Mute/Unmute Support</title>
+    <title>Win Bingo - Full Amharic Voice & Mute</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -11,14 +11,13 @@
         body { background-color: #1a1a2e; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
         #game-root { width: 100%; max-width: 450px; position: relative; }
         .num-circle { background: #ffd700; color: #1a1a2e; width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 0 auto; border: 5px solid #fff; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
-        /* የድምጽ ማጥፊያ ምልክት ስታይል */
         #mute-btn { position: absolute; top: 0; right: 0; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; z-index: 100; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+        .bingo-title { color: #ffd700; text-align: center; font-size: 2.5rem; margin-top: 0; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
 
     <div id="game-root">
-        <!-- ድምጽ መቆጣጠሪያ ቁልፍ -->
         <button id="mute-btn" onclick="toggleMute()">🔊</button>
         <div id="content"><div style="text-align:center; margin-top:50px;">በመጫን ላይ...</div></div>
     </div>
@@ -43,19 +42,12 @@
         const userId = user.id;
         let myFullCard = []; 
         let lastCalledNum = ""; 
-        let isMuted = false; // ድምጹ መጀመሪያ ክፍት ነው
+        let isMuted = false;
 
-        // ድምጽ ማጥፊያና ማብራያ ተግባር
         window.toggleMute = function() {
             isMuted = !isMuted;
-            const btn = document.getElementById("mute-btn");
-            btn.innerText = isMuted ? "🔇" : "🔊";
-            btn.style.background = isMuted ? "rgba(255,0,0,0.2)" : "rgba(255,255,255,0.1)";
+            document.getElementById("mute-btn").innerText = isMuted ? "🔇" : "🔊";
         };
-
-        db.ref(`players/${userId}`).on("value", (snapshot) => {
-            myFullCard = snapshot.exists() ? snapshot.val().card : [];
-        });
 
         const amharicNumbers = {
             1:"አንድ", 2:"ሁለት", 3:"ሦስት", 4:"አራት", 5:"አምስት", 6:"ስድስት", 7:"ሰባት", 8:"ስምንት", 9:"ዘጠኝ", 10:"አስር",
@@ -70,36 +62,26 @@
         const amharicLetters = { "B":"ቢ", "I":"አይ", "N":"ኤን", "G":"ጂ", "O":"ኦ" };
 
         function speakBingo(text) {
-            // ድምጹ ጠፍቶ ከሆነ (Muted) ምንም አያሰማም
-            if (isMuted) return;
-
-            if ('speechSynthesis' in window) {
-                const parts = text.split("-");
-                const letterName = amharicLetters[parts[0]] || parts[0];
-                const numberName = amharicNumbers[parseInt(parts[1])] || parts[1];
-                
-                const msg = new SpeechSynthesisUtterance();
-                msg.text = `${letterName}... ${numberName}`;
-                msg.lang = 'am-ET'; 
-                msg.rate = 0.85; 
-                window.speechSynthesis.speak(msg);
-            }
+            if (isMuted || !('speechSynthesis' in window)) return;
+            const parts = text.split("-");
+            const letter = amharicLetters[parts[0]] || parts[0];
+            const num = amharicNumbers[parseInt(parts[1])] || parts[1];
+            const msg = new SpeechSynthesisUtterance(`${letter}... ${num}`);
+            msg.lang = 'am-ET';
+            msg.rate = 0.85;
+            window.speechSynthesis.speak(msg);
         }
 
         db.ref("gameState").on("value", (snapshot) => {
             const data = snapshot.val() || { status: "IDLE" };
             const content = document.getElementById("content");
-            if (!content) return;
             
             if (data.winner) {
-                content.innerHTML = `<div style="text-align:center; background:#16213e; padding:30px; border-radius:30px; border:3px solid #ffd700;">
-                    <h1 style="color:#ffd700; margin:0;">🎊 BINGO! 🎊</h1>
-                    <div style="background:#ffd700; color:#1a1a2e; padding:12px; border-radius:50px; font-weight:900; margin:20px 0;">${data.winnerName}</div>
-                    <div style="transform: scale(0.8);">${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}</div>
+                content.innerHTML = `<div style="text-align:center;">
+                    <h1 class="bingo-title">🎊 BINGO! 🎊</h1>
+                    <div style="background:#ffd700; color:#1a1a2e; padding:12px; border-radius:50px; font-weight:900; margin:15px 0;">አሸናፊ፡ ${data.winnerName}</div>
+                    ${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}
                 </div>`;
-                if (data.winner === userId) {
-                    setTimeout(() => { db.ref("gameState").set({ status: "IDLE" }); db.ref("players").remove(); }, 3000);
-                }
                 return;
             }
 
@@ -107,66 +89,57 @@
                 let gridHTML = "";
                 for (let i = 1; i <= 80; i++) {
                     const isTaken = !!(data.takenCards && data.takenCards[i]);
-                    gridHTML += `<button onclick="selectCard(${i}, ${isTaken})" style="width:38px; height:38px; margin:2px; border-radius:8px; border:none; background:${isTaken ? '#444' : '#1f4068'}; color:white; font-weight:bold; cursor:pointer;">${i}</button>`;
+                    gridHTML += `<button onclick="selectCard(${i}, ${isTaken})" style="width:38px; height:38px; margin:2px; border-radius:8px; border:none; background:${isTaken ? '#444' : '#1f4068'}; color:white; font-weight:bold;">${i}</button>`;
                 }
-                content.innerHTML = `<div style="text-align:center; color:#ffd700;"><h3>${data.status === "IDLE" ? "ለመጀመር ቁጥር ይምረጡ" : "ጨዋታው ሊጀምር ነው..."}</h3><h1 style="font-size:3.5rem; margin:10px 0;">⏱ ${data.timer || 30}s</h1></div><div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>`;
+                content.innerHTML = `<div style="text-align:center; color:#ffd700;"><h3>ለመጀመር ቁጥር ይምረጡ</h3><h1 style="font-size:3.5rem; margin:10px 0;">⏱ ${data.timer || 30}s</h1></div><div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>`;
             } 
             else if (data.status === "PLAYING") {
-                const calledNumbers = data.calledNumbers || [];
+                const called = data.calledNumbers || [];
                 if (data.currentNum && data.currentNum !== lastCalledNum) {
                     lastCalledNum = data.currentNum;
-                    speakBingo(data.currentNum); 
+                    speakBingo(data.currentNum);
                 }
-                if (myFullCard.length > 0 && !data.winner && checkWin(myFullCard, calledNumbers)) {
+                if (myFullCard.length > 0 && !data.winner && checkWin(myFullCard, called)) {
                     db.ref("gameState").update({ winner: userId, winnerName: user.first_name, winnerCard: myFullCard });
                 }
-                const history = calledNumbers.slice(-4, -1).reverse();
-                const historyHTML = history.map(n => {
-                    let l = (n <= 15) ? "B" : (n <= 30) ? "I" : (n <= 45) ? "N" : (n <= 60) ? "G" : "O";
-                    return `<div style="background:rgba(255,255,255,0.15); width:45px; height:45px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:0.8rem; font-weight:bold; margin:0 5px; border:1px solid rgba(255,255,255,0.2);">${l}-${n}</div>`;
-                }).join('');
-
-                content.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div class="num-circle">${data.currentNum || "..."}</div><div style="display:flex; justify-content:center; margin-top:15px; min-height:45px;">${historyHTML}</div></div>${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:#888;">ተመልካች ነዎት</div>`}`;
+                content.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div class="num-circle">${data.currentNum || "..."}</div></div>${myFullCard.length > 0 ? renderBingoGrid(myFullCard, called) : `<div style="text-align:center;">ተመልካች ነዎት</div>`}`;
             }
         });
 
         window.selectCard = function(n, taken) {
             if (taken || myFullCard.length > 0) return;
-            db.ref("gameState").once("value", (s) => { if (!s.val() || s.val().status === "IDLE") startGlobalTimer(); });
-            let b = getRange(1, 15, 5), i = getRange(16, 30, 5), n_c = getRange(31, 45, 4), g = getRange(46, 60, 5), o = getRange(61, 75, 5);
-            n_c.splice(2, 0, "FREE"); 
-            db.ref(`players/${userId}`).set({ name: user.first_name, card: [...b, ...i, ...n_c, ...g, ...o] });
+            db.ref("gameState").once("value", (s) => { if (!s.val() || s.val().status === "IDLE") startTimer(); });
+            let b=getRange(1,15,5), i=getRange(16,30,5), n_c=getRange(31,45,4), g=getRange(46,60,5), o=getRange(61,75,5);
+            n_c.splice(2,0,"FREE");
+            myFullCard = [...b,...i,...n_c,...g,...o];
+            db.ref(`players/${userId}`).set({ name: user.first_name, card: myFullCard });
             db.ref(`gameState/takenCards/${n}`).set(true);
         };
 
-        function startGlobalTimer() {
-            let t = 30; db.ref("gameState").update({ status: "WAITING", timer: t, winner: null, calledNumbers: [], currentNum: "" });
-            const ti = setInterval(() => { t--; db.ref("gameState/timer").set(t); if (t <= 0) { clearInterval(ti); db.ref("gameState/status").set("PLAYING"); callNumbers(); } }, 1000);
+        function startTimer() {
+            let t = 30; db.ref("gameState").update({ status: "WAITING", timer: t, winner: null, calledNumbers: [] });
+            const ti = setInterval(() => { t--; db.ref("gameState/timer").set(t); if(t<=0){ clearInterval(ti); db.ref("gameState/status").set("PLAYING"); callNums(); } }, 1000);
         }
 
-        function callNumbers() {
-            let pool = Array.from({length: 75}, (_, i) => i + 1); let called = [];
+        function callNums() {
+            let p = Array.from({length:75}, (_,i)=>i+1); let c = [];
             const gi = setInterval(() => {
                 db.ref("gameState/winner").once("value", (s) => {
-                    if (s.exists() || pool.length === 0) { clearInterval(gi); return; }
-                    let n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-                    let l = (n <= 15) ? "B" : (n <= 30) ? "I" : (n <= 45) ? "N" : (n <= 60) ? "G" : "O";
-                    called.push(n); db.ref("gameState").update({ currentNum: l + "-" + n, calledNumbers: called });
+                    if(s.exists() || p.length===0){ clearInterval(gi); return; }
+                    let n=p.splice(Math.floor(Math.random()*p.length),1)[0];
+                    let l=(n<=15)?"B":(n<=30)?"I":(n<=45)?"N":(n<=60)?"G":"O";
+                    c.push(n); db.ref("gameState").update({ currentNum: l+"-"+n, calledNumbers: c });
                 });
-            }, 3000);
+            }, 4000);
         }
 
         function renderBingoGrid(card, called) {
-            let gridHTML = "";
-            for (let row = 0; row < 5; row++) {
-                for (let col = 0; col < 5; col++) {
-                    let num = card[col * 5 + row];
-                    const isHit = called.includes(num) || num === "FREE";
-                    const isLatest = called[called.length-1] === num;
-                    gridHTML += `<div style="background:${isHit ? (isLatest ? '#ff4d4d' : '#e94560') : '#1f4068'}; color:white; height:42px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px; font-size:1rem;">${num}</div>`;
-                }
-            }
-            return `<div style="background:white; padding:12px; border-radius:15px; width:280px; margin:auto;"><div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:5px;">${gridHTML}</div></div>`;
+            let html = "";
+            for(let r=0; r<5; r++){ for(let c=0; c<5; c++){
+                let n=card[c*5+r]; let hit=called.includes(n) || n==="FREE";
+                html += `<div style="background:${hit?'#e94560':'#1f4068'}; color:white; height:42px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px;">${n}</div>`;
+            }}
+            return `<div style="background:white; padding:10px; border-radius:15px; display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; width:260px; margin:auto;">${html}</div>`;
         }
 
         function checkWin(card, called) {
@@ -175,8 +148,8 @@
         }
 
         function getRange(min, max, count) {
-            let a = []; while(a.length < count) { let r = Math.floor(Math.random() * (max - min + 1)) + min; if(!a.includes(r)) a.push(r); }
-            return a.sort((x, y) => x - y);
+            let a=[]; while(a.length<count){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!a.includes(r)) a.push(r); }
+            return a.sort((x,y)=>x-y);
         }
     </script>
 </body>
