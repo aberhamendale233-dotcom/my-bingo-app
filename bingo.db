@@ -1,1 +1,37 @@
 
+-- የተጠቃሚዎች መረጃ ሰንጠረዥ
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,       -- የተጠቃሚ ስም
+    balance REAL DEFAULT 0.0,            -- ያለው የገንዘብ መጠን
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- የጨዋታዎች መረጃ ሰንጠረዥ
+CREATE TABLE IF NOT EXISTS games (
+    game_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    status TEXT DEFAULT 'pending',       -- የጨዋታው ሁኔታ (በጥባጭ፣ ተጀምሯል፣ ተጠናቋል)
+    winning_numbers TEXT,                -- የወጡ አሸናፊ ቁጥሮች
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- የቢንጎ ካርዶች ሰንጠረዥ
+CREATE TABLE IF NOT EXISTS tickets (
+    ticket_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    game_id INTEGER,
+    card_data TEXT NOT NULL,             -- በካርዱ ላይ ያሉ የቁጥር ዝርዝሮች (JSON)
+    is_winner BOOLEAN DEFAULT 0,         -- አሸናፊ ከሆነ '1' ካልሆነ '0'
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (game_id) REFERENCES games(game_id)
+);
+
+-- የገንዘብ ዝውውር መቆጣጠሪያ (ለካሲኖው)
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    amount REAL,                         -- የገንዘብ መጠን
+    type TEXT,                           -- ዓይነት (ተቀማጭ፣ ወጪ፣ ውርርድ፣ ድል)
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
