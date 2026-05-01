@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win Bingo - Manual Selection</title>
+    <title>Win Bingo - One Number One Card</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -11,16 +11,18 @@
         body { background-color: #1a1a2e; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; display: flex; justify-content: center; }
         #game-root { width: 100%; max-width: 400px; position: relative; }
         
-        .num-circle { background: #ffd700; color: #1a1a2e; width: 80px; height: 80px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2rem; font-weight: 900; margin: 15px auto; border: 4px solid #fff; }
+        /* ቁጥር ማሳያ */
+        .num-circle { background: #ffd700; color: #1a1a2e; width: 80px; height: 80px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 15px auto; border: 4px solid #fff; box-shadow: 0 0 15px rgba(255,215,0,0.3); }
         
+        /* የካርድ ዲዛይን */
         .grid-container { background: white; padding: 12px; border-radius: 18px; margin: 0 auto; width: 90%; }
         .grid-cells { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .cell { color: white; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 6px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
+        .cell { color: white; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 6px; font-weight: bold; font-size: 1.1rem; }
         
-        /* ቁጥር መምረጫ ስክሪን */
-        .selection-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; background: #16213e; padding: 10px; border-radius: 10px; max-height: 300px; overflow-y: auto; }
-        .sel-box { padding: 8px 2px; background: #0f3460; text-align: center; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-        .sel-box.active { background: #ffd700; color: #1a1a2e; font-weight: bold; }
+        /* የቁጥር መምረጫ (1-80) */
+        .selection-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; background: #16213e; padding: 10px; border-radius: 12px; }
+        .sel-box { padding: 12px 2px; background: #0f3460; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid #1f4068; }
+        .sel-box:hover { background: #1a1a2e; border-color: #ffd700; }
         
         .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 8px; text-align: center; font-weight: 900; color: #1a1a2e; }
         .bingo-letter { background: #ffd700; padding: 5px 0; border-radius: 5px; }
@@ -49,84 +51,77 @@
         if (tg) { tg.expand(); tg.ready(); }
 
         const user = tg?.initDataUnsafe?.user || { id: "user_test", first_name: "ተጫዋች" };
-        let selectedNumbers = [];
 
-        // ጨዋታውን መከታተል
-        db.ref("gameState").on("value", (snap) => {
-            const data = snap.val();
-            if (data && data.status === "PLAYING" && selectedNumbers.length === 24) {
-                renderGame(data);
-            } else if (selectedNumbers.length < 24) {
+        // የዳታቤዝ ክትትል
+        db.ref(`players/${user.id}`).on("value", (pSnap) => {
+            const userData = pSnap.val();
+            if (userData && userData.card) {
+                db.ref("gameState").on("value", (gSnap) => {
+                    renderGame(gSnap.val() || { status: "WAITING" }, userData.card, userData.chosenNum);
+                });
+            } else {
                 renderSelection();
             }
         });
 
-        // ቁጥር መምረጫ UI
         function renderSelection() {
             let boxes = "";
             for (let i = 1; i <= 80; i++) {
-                const isActive = selectedNumbers.includes(i);
-                boxes += `<div class="sel-box ${isActive?'active':''}" onclick="toggleNum(${i})">${i}</div>`;
+                boxes += `<div class="sel-box" onclick="generateCardFromNum(${i})">${i}</div>`;
             }
             document.getElementById("content").innerHTML = `
                 <div style="text-align:center;">
-                    <h3 style="color:#ffd700;">24 ቁጥሮችን ይምረጡ (${selectedNumbers.length}/24)</h3>
+                    <h2 style="color:#ffd700; margin: 15px 0;">ቁጥርዎን ይምረጡ</h2>
+                    <p style="margin-bottom:20px;">የመረጡት ቁጥር ያለበት ካርድ ይሰጥዎታል</p>
                     <div class="selection-grid">${boxes}</div>
-                    <button id="start-btn" onclick="confirmCard()" style="margin-top:20px; padding:15px; width:100%; border-radius:10px; background:${selectedNumbers.length===24?'#ffd700':'#555'}; border:none; font-weight:bold;" ${selectedNumbers.length!==24?'disabled':''}>ካርዱን አረጋግጥ</button>
                 </div>`;
         }
 
-        window.toggleNum = function(n) {
-            if (selectedNumbers.includes(n)) {
-                selectedNumbers = selectedNumbers.filter(x => x !== n);
-            } else {
-                if (selectedNumbers.length < 24) selectedNumbers.push(n);
+        window.generateCardFromNum = function(num) {
+            // አንድ ቁጥር ሲመረጥ 24 ተጨማሪ ቁጥሮችን ማመንጨት
+            let cardNums = [num];
+            while(cardNums.length < 24) {
+                let r = Math.floor(Math.random() * 80) + 1;
+                if(!cardNums.includes(r)) cardNums.push(r);
             }
-            renderSelection();
-        };
+            // ለውበት ሲባል በቅደም ተከተል ማስቀመጥ
+            cardNums.sort((a, b) => a - b);
+            cardNums.splice(12, 0, "FREE"); // መሃል ላይ FREE መጨመር
 
-        window.confirmCard = function() {
-            selectedNumbers.sort((a, b) => a - b);
-            // FREE space መጨመር
-            let finalCard = [...selectedNumbers];
-            finalCard.splice(12, 0, "FREE"); 
-            
-            db.ref(`players/${user.id}`).set({ 
-                name: user.first_name, 
-                card: finalCard 
-            }).then(() => {
-                alert("ካርድዎ ተመዝግቧል! ጨዋታው ሲጀመር ይጠብቁ።");
+            db.ref(`players/${user.id}`).set({
+                name: user.first_name,
+                chosenNum: num,
+                card: cardNums,
+                joinedAt: Date.now()
             });
         };
 
-        function renderGame(data) {
+        function renderGame(gameData, card, chosenNum) {
             const root = document.getElementById("content");
             let cells = "";
-            const called = data.calledNumbers || [];
-            
-            db.ref(`players/${user.id}/card`).once("value", (snap) => {
-                const card = snap.val() || [];
-                if (card.length === 0) return;
+            const called = gameData.calledNumbers || [];
 
-                for(let i=0; i<25; i++) {
-                    let val = card[i];
-                    let hit = called.includes(val) || val === "FREE";
-                    cells += `<div class="cell" style="background:${hit?'#e94560':'#1f4068'};">${val}</div>`;
-                }
+            for(let i=0; i<25; i++) {
+                let val = card[i];
+                let isHit = called.includes(val) || val === "FREE";
+                // የመረጠው ቁጥር ከሆነ የተለየ ከለር እንዲኖረው
+                let isChosen = (val === chosenNum);
+                cells += `<div class="cell" style="background:${isHit?'#e94560':(isChosen?'#ffd700':'#1f4068')}; color:${isChosen && !isHit?'#1a1a2e':'white'}; border:${isChosen?'2px solid #fff':'none'};">${val}</div>`;
+            }
 
-                root.innerHTML = `
-                    <div style="text-align:center;">
-                        <div class="num-circle">${data.currentNum || "..." }</div>
-                        <div class="grid-container">
-                            <div class="bingo-header">
-                                <div class="bingo-letter">B</div><div class="bingo-letter">I</div>
-                                <div class="bingo-letter">N</div><div class="bingo-letter">G</div>
-                                <div class="bingo-letter">O</div>
-                            </div>
-                            <div class="grid-cells">${cells}</div>
+            root.innerHTML = `
+                <div style="text-align:center;">
+                    <div class="num-circle">${gameData.currentNum || "..." }</div>
+                    <div class="grid-container">
+                        <div class="bingo-header">
+                            <div class="bingo-letter">B</div><div class="bingo-letter">I</div>
+                            <div class="bingo-letter">N</div><div class="bingo-letter">G</div>
+                            <div class="bingo-letter">O</div>
                         </div>
-                    </div>`;
-            });
+                        <div class="grid-cells">${cells}</div>
+                    </div>
+                    <p style="margin-top:20px;">የመረጡት ቁጥር: <b style="color:#ffd700; font-size:1.5rem;">${chosenNum}</b></p>
+                </div>`;
         }
     </script>
 </body>
