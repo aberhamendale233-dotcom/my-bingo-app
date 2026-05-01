@@ -1,198 +1,71 @@
-const firebase = require("firebase-admin");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 
-// 🔥 INIT FIREBASE
-firebase.initializeApp({
-    credential: firebase.credential.applicationDefault(),
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com"
-});
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-const db = firebase.database();
+let gameState = "WAITING"; // WAITING, PLAYING
+let countdown = 35;
+let drawnNumbers = [];
+let gameInterval;
 
-// ================= GAME CONFIG =================
-let pool = [];
-let called = [];
-let players = {};
-let selectionOpen = false;
-let gameRunning = false;
+function startNewRound() {
+    gameState = "WAITING";
+    countdown = 35;
+    drawnNumbers = [];
+    
+    console.log("አዲስ ዙር ለመጀመር 35 ሰከንድ ቆጠራ ተጀምሯል...");
+    
+    let waitInterval = setInterval(() => {
+        countdown--;
+        // ለሁሉም ተጫዋቾች የቀረውን ሰከንድ ላክ
+        io.emit('timer_update', { countdown, state: gameState });
 
-// ================= INIT NUMBERS (1–75) =================
-function initPool() {
-    pool = Array.from({ length: 75 }, (_, i) => i + 1);
-    shuffle(pool);
-}
-
-function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-}
-
-// ================= START SELECTION =================
-function startSelection() {
-    selectionOpen = true;
-    gameRunning = false;
-    initPool();
-    called = [];
-
-    db.ref("gameState").set({
-        status: "WAITING",
-        timer: 30,
-        calledNumbers: []
-    });
-
-    let t = 30;
-
-    const interval = setInterval(() => {
-        t--;
-
-        db.ref("gameState/timer").set(t);
-
-        if (t <= 0) {
-            clearInterval(interval);
-            selectionOpen = false;
-            startGame();
+        if (countdown <= 0) {
+            clearInterval(waitInterval);
+            beginDrawingNumbers();
         }
     }, 1000);
 }
 
-// ================= PLAYER JOIN (1–5 CARDS ALLOWED) =================
-function joinPlayer(userId, cardsCount = 1) {
-    if (!selectionOpen) return "❌ Closed";
+function beginDrawingNumbers() {
+    gameState = "PLAYING";
+    console.log("ጨዋታ ተጀምሯል! ማንም መግባት አይችልም።");
+    io.emit('game_started', { state: gameState });
 
-    if (players[userId]) return "❌ Already joined";
-
-    if (cardsCount < 1 || cardsCount > 5) {
-        return "❌ Invalid card count (1–5 only)";
-    }
-
-    let cards = [];
-
-    for (let i = 0; i < cardsCount; i++) {
-        cards.push(generateCard());
-    }
-
-    players[userId] = cards;
-
-    db.ref("players/" + userId).set({
-        cards
-    });
-
-    return "✅ Joined";
-}
-
-// ================= CARD GENERATION =================
-function generateCard() {
-    let card = [];
-
-    for (let i = 0; i < 25; i++) {
-        card.push(Math.floor(Math.random() * 75) + 1);
-    }
-
-    card[12] = "FREE";
-    return card;
-}
-
-// ================= START GAME =================
-function startGame() {
-    gameRunning = true;
-
-    db.ref("gameState").update({
-        status: "PLAYING"
-    });
-
-    gameLoop();
-}
-
-// ================= GAME LOOP =================
-function gameLoop() {
-    const interval = setInterval(() => {
-
-        if (!gameRunning || pool.length === 0) {
-            clearInterval(interval);
+    gameInterval = setInterval(() => {
+        if (drawnNumbers.length >= 75) {
+            stopGame("No one won, numbers exhausted");
             return;
         }
 
-        const num = drawNumber();
-        const label = getLabel(num);
+        // በየ 3 ሰከንዱ አዲስ ቁጥር ማውጣት
+        let newNumber = Math.floor(Math.random() * 75) + 1;
+        while (drawnNumbers.includes(newNumber)) {
+            newNumber = Math.floor(Math.random() * 75) + 1;
+        }
+        
+        drawnNumbers.push(newNumber);
+        io.emit('new_number', { number: newNumber, allNumbers: drawnNumbers });
 
-        called.push(num);
-
-        db.ref("gameState").update({
-            currentNumber: `${label}-${num}`,
-            calledNumbers: called
-        });
-
-        checkWinner();
+        // እዚህ ጋር አሸናፊ መኖሩን በሰርቨር በኩል ቼክ ታደርጋለህ
+        // let winner = checkWinners(drawnNumbers); 
+        // if (winner) stopGame(winner);
 
     }, 3000);
 }
 
-// ================= DRAW NUMBER =================
-function drawNumber() {
-    let i = Math.floor(Math.random() * pool.length);
-    return pool.splice(i, 1)[0];
+function stopGame(winnerData) {
+    clearInterval(gameInterval);
+    console.log("ጨዋታው ተጠናቋል!");
+    io.emit('game_over', { winner: winnerData });
+
+    // አሸናፊው ከታወቀ በኋላ ወደ አዲስ ዙር ቆጠራ ይመለሳል
+    setTimeout(() => {
+        startNewRound();
+    }, 5000); // 5 ሰከንድ ውጤቱን ለማሳየት
 }
 
-// ================= LETTER =================
-function getLabel(n) {
-    if (n <= 15) return "B";
-    if (n <= 30) return "I";
-    if (n <= 45) return "N";
-    if (n <= 60) return "G";
-    return "O";
-}
-
-// ================= WIN CHECK =================
-function checkWinner() {
-    for (let userId in players) {
-        let cards = players[userId];
-
-        for (let card of cards) {
-            if (isWin(card)) {
-                console.log("🏆 WINNER:", userId);
-
-                gameRunning = false;
-
-                db.ref("gameState").update({
-                    winner: userId,
-                    status: "FINISHED"
-                });
-
-                return;
-            }
-        }
-    }
-}
-
-// ================= WIN RULE =================
-function isWin(card) {
-    return card.every(n =>
-        n === "FREE" || called.includes(n)
-    );
-}
-
-// ================= RESET =================
-function resetGame() {
-    selectionOpen = false;
-    gameRunning = false;
-    pool = [];
-    called = [];
-    players = {};
-
-    db.ref("gameState").set({
-        status: "IDLE",
-        currentNumber: null,
-        calledNumbers: [],
-        winner: null
-    });
-
-    db.ref("players").remove();
-}
-
-// ================= EXPORT =================
-module.exports = {
-    startSelection,
-    joinPlayer,
-    resetGame
-};
+startNewRound();
