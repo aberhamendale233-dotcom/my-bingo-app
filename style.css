@@ -1,86 +1,203 @@
+/* የWIN BINGO ዋና ቀለማት እና ተለዋዋጮች */
 :root {
-    --main-bg: #0d0d21;
-    --card-bg: #16162d;
-    --gold: #ffcc00;
-    --neon-green: #00e676;
-    --text-muted: #a0a0b8;
+    --main-bg: #0d0d21;      /* ጥቁር ሰማያዊ ዳራ */
+    --card-bg: #16162d;      /* የካርዱ ውስጠኛ ቀለም */
+    --gold: #ffcc00;         /* ለሎጎ እና ለዋና ጽሁፎች */
+    --neon-green: #00e676;   /* ለPLAY ቁልፍ */
+    --text-muted: #a0a0b8;   /* ለደበዘዙ ጽሁፎች */
+    --nav-bg: #09091a;       /* የታችኛው ሜኑ ቀለም */
 }
 
+/* መሰረታዊ የአቀማመጥ ቅንጅቶች */
 body {
     margin: 0;
+    padding: 0;
     background-color: var(--main-bg);
     color: white;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     display: flex;
     justify-content: center;
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden; /* ስክሪኑ እንዳይንሸራተት */
 }
 
+/* ዋናው መያዣ (Container) */
 .app-container {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px; /* ለሞባይል ተስማሚ መጠን */
     display: flex;
     flex-direction: column;
+    height: 100%;
+    position: relative;
 }
 
-header { padding: 15px; display: flex; justify-content: flex-end; }
+/* የላይኛው Rules ቁልፍ */
+header {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
 .rules-btn {
     background: #252545;
     color: white;
     border: none;
-    padding: 6px 18px;
-    border-radius: 15px;
-    font-size: 0.8rem;
+    padding: 7px 20px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
-.welcome-section { text-align: center; margin-top: 20px; }
-.welcome-text { font-size: 1.1rem; color: white; margin-bottom: 5px; }
-.main-logo { 
-    font-size: 3.2rem; 
-    color: var(--gold); 
-    margin: 0; 
+.rules-btn:hover {
+    background: #353565;
+}
+
+/* የሎጎ እና የእንኳን ደህና መጡ ክፍል */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.welcome-section {
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 30px;
+}
+
+.welcome-text {
+    font-size: 1.2rem;
+    color: white;
+    margin: 0;
+    font-weight: 500;
+}
+
+.main-logo {
+    font-size: 3.5rem;
+    color: var(--gold);
+    margin: 5px 0 0 0;
     font-weight: 900;
-    text-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    /* የብርሃን ድምቀት ውጤት */
+    text-shadow: 0 0 20px rgba(255, 204, 0, 0.4);
 }
 
+/* የመጫወቻ ካርዱ (Stake Card) */
 .stake-card {
     background: var(--card-bg);
-    margin: 40px 25px;
-    padding: 40px 20px;
-    border-radius: 25px;
+    width: 85%;
+    padding: 40px 25px;
+    border-radius: 35px;
     text-align: center;
     border: 1px solid #2a2a4a;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
 }
 
-.stake-title { color: white; letter-spacing: 1px; font-size: 0.9rem; }
+.stake-title {
+    color: white;
+    letter-spacing: 1.5px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
 
+/* በጽሁፎች መካከል ያለው ቀጭን መስመር */
+.glow-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #3a3a5a, transparent);
+    margin: 20px 0;
+}
+
+/* የPLAY 10 ቁልፍ */
 .play-button {
     background: var(--neon-green);
     color: #000;
     border: none;
     width: 100%;
     padding: 18px;
-    font-size: 1.6rem;
-    font-weight: bold;
-    border-radius: 12px;
+    font-size: 1.7rem;
+    font-weight: 800;
+    border-radius: 15px;
     margin: 25px 0;
-    box-shadow: 0 5px 15px rgba(0, 230, 118, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 8px 20px rgba(0, 230, 118, 0.3);
+    transition: transform 0.1s;
 }
 
-.wallet-label { color: white; font-size: 0.9rem; margin-bottom: 10px; }
-.balance-amount { font-size: 2.5rem; margin: 0; font-weight: bold; }
+.play-button:active {
+    transform: scale(0.96);
+}
 
+.icon-play {
+    font-size: 1.4rem;
+}
+
+/* የገንዘብ መጠን ማሳያ ክፍል */
+.wallet-section {
+    margin-top: 10px;
+}
+
+.wallet-label {
+    color: white;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.balance-amount {
+    font-size: 2.8rem;
+    margin: 0;
+    font-weight: 700;
+    color: white;
+}
+
+/* የታችኛው ሜኑ (Navigation) */
 .bottom-nav {
-    margin-top: auto;
-    background: #09091a;
+    background: var(--nav-bg);
     display: flex;
     justify-content: space-around;
-    padding: 12px 5px;
+    padding: 12px 10px 25px 10px; /* ለስልኮች ምቾት ሲባል ከታች ሰፋ ያለ ነው */
     border-top: 1px solid #1a1a3a;
 }
 
-.nav-item { text-align: center; color: #666680; }
-.nav-item.active { color: var(--neon-green); }
-.nav-icon { display: block; font-size: 1.3rem; margin-bottom: 4px; }
-.nav-text { font-size: 0.65rem; font-weight: bold; }
+.nav-item {
+    text-align: center;
+    color: #666680;
+    flex: 1;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.nav-item.active {
+    color: var(--neon-green);
+}
+
+.nav-icon {
+    display: block;
+    font-size: 1.4rem;
+    margin-bottom: 5px;
+}
+
+.nav-text {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* የቦት ስም ማሳያ (ከታች የሚታየው) */
+.bot-username {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding-bottom: 5px;
+    background: var(--nav-bg);
+}
