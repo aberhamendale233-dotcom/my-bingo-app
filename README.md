@@ -1,40 +1,44 @@
-<!DOCTYPE html>
-<html lang="am">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bingo Mini App</title>
-    <style>
-        body { background-color: #1a1a2e; color: white; text-align: center; font-family: sans-serif; margin: 0; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 350px; margin: 20px auto; }
-        .cell { aspect-ratio: 1; background: #16213e; border: 2px solid #e94560; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .cell.active { background: #e94560; color: white; transform: scale(1.1); }
-        button { background: #00d2ff; color: #1a1a2e; border: none; padding: 12px 25px; border-radius: 25px; font-weight: bold; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3); }
-    </style>
-</head>
-<body>
-    <h2>🎰 BINGO MINI APP 🎰</h2>
-    <div class="grid" id="board"></div>
-    <button onclick="generate()">አዲስ ካርድ አውጣ</button>
 
-    <script>
-        function generate() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            let nums = [];
-            while(nums.length < 25) {
-                let r = Math.floor(Math.random() * 75) + 1;
-                if(!nums.includes(r)) nums.push(r);
-            }
-            nums.forEach(n => {
-                const div = document.createElement('div');
-                div.className = 'cell';
-                div.innerText = n;
-                div.onclick = function() { this.classList.toggle('active'); };
-                board.appendChild(div);
-            });
-        }
-        generate();
-    </script>
-</body>
-</html>
+# 🎰 Bingo Multiplayer System (Real-Time)
+
+A scalable real-time multiplayer Bingo game with Firebase, Telegram WebApp, and Node.js backend support.
+
+---
+
+# 🚀 FEATURES
+
+## 🎮 Game Features
+✔ Real-time multiplayer Bingo (1–5000+ users)  
+✔ 1–5 cards per player selection  
+✔ 1–75 number system (classic Bingo)  
+✔ Automatic number calling system  
+✔ Live winner detection  
+✔ Auto game reset system  
+✔ Anti-cheat basic protection  
+
+## 📡 Real-Time Features
+✔ Firebase Realtime Database sync  
+✔ Live leaderboard updates  
+✔ Instant game state updates  
+✔ Multiplayer room support  
+
+## 🤖 Telegram Integration
+✔ Telegram WebApp support  
+✔ Auto user detection  
+✔ Bot-ready architecture  
+✔ Instant gameplay access  
+
+---
+
+# 🧩 TECHNOLOGY STACK
+
+- HTML / CSS / JavaScript (Frontend)
+- Firebase Realtime Database
+- Node.js (Backend engine)
+- WebSocket (optional scaling)
+- Telegram WebApp API
+- Redis (for scaling optional)
+
+---
+
+# 📁 PROJECT STRUCTURE
