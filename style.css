@@ -1,83 +1,90 @@
-/* የቢንጎ ጨዋታ ዋና ገጽታ */
+:root {
+    --bg-color: #0b0b1a;
+    --card-bg: #1a1a2e;
+    --primary-color: #ffcc00;
+    --secondary-color: #00d28a;
+    --text-white: #ffffff;
+    --nav-bg: #12122b;
+}
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #1a1a2e;
-    color: #ffffff;
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-white);
+    display: flex;
+    justify-content: center;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 450px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    align-items: center;
+}
+
+.logo { font-size: 1.5rem; font-weight: bold; }
+
+.rules-btn {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.main-content {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    margin: 0;
+    padding-top: 50px;
 }
 
-h1 {
-    color: #e94560;
-    text-shadow: 2px 2px #0f3460;
-    margin-bottom: 20px;
-}
+.welcome-text { text-align: center; margin-bottom: 30px; }
+.welcome-text p { font-size: 1.2rem; margin: 0; }
+.title { font-size: 3rem; color: var(--primary-color); margin: 0; }
 
-/* የቢንጎ ሰንጠረዥ (Grid) */
-.bingo-board {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    background: #16213e;
-    padding: 15px;
-    border-radius: 15px;
+.stake-card {
+    background: var(--card-bg);
+    width: 85%;
+    padding: 30px 20px;
+    border-radius: 30px;
+    text-align: center;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
-/* እያንዳንዱ የቢንጎ ቁጥር ሳጥን */
-.cell {
-    width: 60px;
-    height: 60px;
-    background-color: #0f3460;
-    border: 2px solid #e94560;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: transform 0.2s, background-color 0.3s;
-}
-
-.cell:hover {
-    transform: scale(1.05);
-    background-color: #16213e;
-}
-
-/* የተመረጠ ቁጥር ሲሆን የሚኖረው ቀለም */
-.cell.marked {
-    background-color: #e94560;
-    color: white;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
-}
-
-/* የቁጥጥር ቁልፎች (Buttons) */
-button {
-    margin-top: 25px;
-    padding: 12px 25px;
-    font-size: 1rem;
-    background-color: #e94560;
-    color: white;
+.play-button {
+    background: var(--secondary-color);
+    color: #000;
     border: none;
-    border-radius: 5px;
+    width: 100%;
+    padding: 15px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border-radius: 15px;
+    margin: 20px 0;
     cursor: pointer;
-    transition: background 0.3s;
 }
 
-button:hover {
-    background-color: #c62a48;
+.bottom-nav {
+    background: var(--nav-bg);
+    display: flex;
+    justify-content: space-around;
+    padding: 15px 0;
+    border-top: 1px solid #222;
 }
 
-/* ለሞባይል ስልክ እንዲመች (Responsive) */
-@media (max-width: 400px) {
-    .cell {
-        width: 50px;
-        height: 50px;
-        font-size: 1rem;
-    }
-}
+.nav-item { text-align: center; font-size: 0.7rem; color: #888; }
+.nav-item.active { color: var(--secondary-color); }
+.nav-item .icon { font-size: 1.2rem; margin-bottom: 5px; }
