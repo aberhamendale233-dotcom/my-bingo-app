@@ -3,26 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win Bingo - Absolute Fix</title>
+    <title>Win Bingo - Full Amharic Voice & Mute</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background-color: #1a1a2e; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; display: flex; justify-content: center; }
-        #game-root { width: 100%; max-width: 400px; }
-        .num-circle { background: #ffd700; color: #1a1a2e; width: 85px; height: 85px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 15px auto; border: 4px solid #fff; box-shadow: 0 0 15px rgba(255,215,0,0.3); }
-        .grid-container { background: white; padding: 12px; border-radius: 18px; margin: 0 auto; width: 90%; }
-        .grid-cells { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .cell { color: white; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 6px; font-weight: bold; font-size: 1.1rem; border: 1px solid rgba(0,0,0,0.1); }
-        .selection-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; background: #16213e; padding: 10px; border-radius: 12px; }
-        .sel-box { padding: 12px 2px; background: #0f3460; text-align: center; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid #1f4068; }
-        .bingo-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 8px; text-align: center; font-weight: 900; color: #1a1a2e; }
-        .bingo-letter { background: #ffd700; padding: 5px 0; border-radius: 5px; }
+        body { background-color: #1a1a2e; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        #game-root { width: 100%; max-width: 450px; position: relative; }
+        .num-circle { background: #ffd700; color: #1a1a2e; width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 0 auto; border: 5px solid #fff; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        #mute-btn { position: absolute; top: 0; right: 0; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; z-index: 100; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+        .bingo-title { color: #ffd700; text-align: center; font-size: 2.5rem; margin-top: 0; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
+
     <div id="game-root">
-        <div id="content">በመጫን ላይ...</div>
+        <button id="mute-btn" onclick="toggleMute()">🔊</button>
+        <div id="content"><div style="text-align:center; margin-top:50px;">በመጫን ላይ...</div></div>
     </div>
 
     <script>
@@ -36,86 +33,123 @@
             appId: "1:793283320707:web:4a6de806ba7a3048eaf4b6"
         };
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.database();
-        const tg = window.Telegram?.WebApp;
+        const tg = window.Telegram ? window.Telegram.WebApp : null;
         if (tg) { tg.expand(); tg.ready(); }
 
-        const userId = tg?.initDataUnsafe?.user?.id || "user_test_888";
-        const userName = tg?.initDataUnsafe?.user?.first_name || "ተጫዋች";
+        const user = tg?.initDataUnsafe?.user || { id: "guest_" + Math.floor(Math.random() * 10000), first_name: "ተጫዋች" };
+        const userId = user.id;
+        let myFullCard = []; 
+        let lastCalledNum = ""; 
+        let isMuted = false;
 
-        // ዳታቤዙን መከታተል
-        db.ref(`players/${userId}`).on("value", (snapshot) => {
-            const data = snapshot.val();
-            // chosenNum ከሌለው ወይም undefined ከሆነ ወደ መምረጫው ይመልሰው
-            if (data && data.card && data.chosenNum !== undefined) {
-                db.ref("gameState").on("value", (gSnap) => {
-                    renderGame(gSnap.val() || {}, data.card, data.chosenNum);
-                });
-            } else {
-                renderSelection();
+        window.toggleMute = function() {
+            isMuted = !isMuted;
+            document.getElementById("mute-btn").innerText = isMuted ? "🔇" : "🔊";
+        };
+
+        const amharicNumbers = {
+            1:"አንድ", 2:"ሁለት", 3:"ሦስት", 4:"አራት", 5:"አምስት", 6:"ስድስት", 7:"ሰባት", 8:"ስምንት", 9:"ዘጠኝ", 10:"አስር",
+            11:"አስራ አንድ", 12:"አስራ ሁለት", 13:"አስራ ሦስት", 14:"አስራ አራት", 15:"አስራ አምስት", 16:"አስራ ስድስት", 17:"አስራ ሰባት", 18:"አስራ ስምንት", 19:"አስራ ዘጠኝ", 20:"ሃያ",
+            21:"ሃያ አንድ", 22:"ሃያ ሁለት", 23:"ሃያ ሦስት", 24:"ሃያ አራት", 25:"ሃያ አምስት", 26:"ሃያ ስድስት", 27:"ሃያ ሰባት", 28:"ሃያ ስምንት", 29:"ሃያ ዘጠኝ", 30:"ሰላሳ",
+            31:"ሰላሳ አንድ", 32:"ሰላሳ ሁለት", 33:"ሰላሳ ሦስት", 34:"ሰላሳ አራት", 35:"ሰላሳ አምስት", 36:"ሰላሳ ስድስት", 37:"ሰላሳ ሰባት", 38:"ሰላሳ ስምንት", 39:"ሰላሳ ዘጠኝ", 40:"አርባ",
+            41:"አርባ አንድ", 42:"አርባ ሁለት", 43:"አርባ ሦስት", 44:"አርባ አራት", 45:"አርባ አምስት", 46:"አርባ ስድስት", 47:"አርባ ሰባት", 48:"አርባ ስምንት", 49:"አርባ ዘጠኝ", 50:"ሃምሳ",
+            51:"ሃምሳ አንድ", 52:"ሃምሳ ሁለት", 53:"ሃምሳ ሦስት", 54:"ሃምሳ አራት", 55:"ሃምሳ አምስት", 56:"ሃምሳ ስድስት", 57:"ሃምሳ ሰባት", 58:"ሃምሳ ስምንት", 59:"ሃምሳ ዘጠኝ", 60:"ስድሳ",
+            61:"ስድሳ አንድ", 62:"ስድሳ ሁለት", 63:"ስድሳ ሦስት", 64:"ስድሳ አራት", 65:"ስድሳ አምስት", 66:"ስድሳ ስድስት", 67:"ስድሳ ሰባት", 68:"ስድሳ ስምንት", 69:"ስድሳ ዘጠኝ", 70:"ሰባ",
+            71:"ሰባ አንድ", 72:"ሰባ ሁለት", 73:"ሰባ ሦስት", 74:"ሰባ አራት", 75:"ሰባ አምስት"
+        };
+        const amharicLetters = { "B":"ቢ", "I":"አይ", "N":"ኤን", "G":"ጂ", "O":"ኦ" };
+
+        function speakBingo(text) {
+            if (isMuted || !('speechSynthesis' in window)) return;
+            const parts = text.split("-");
+            const letter = amharicLetters[parts[0]] || parts[0];
+            const num = amharicNumbers[parseInt(parts[1])] || parts[1];
+            const msg = new SpeechSynthesisUtterance(`${letter}... ${num}`);
+            msg.lang = 'am-ET';
+            msg.rate = 0.85;
+            window.speechSynthesis.speak(msg);
+        }
+
+        db.ref("gameState").on("value", (snapshot) => {
+            const data = snapshot.val() || { status: "IDLE" };
+            const content = document.getElementById("content");
+            
+            if (data.winner) {
+                content.innerHTML = `<div style="text-align:center;">
+                    <h1 class="bingo-title">🎊 BINGO! 🎊</h1>
+                    <div style="background:#ffd700; color:#1a1a2e; padding:12px; border-radius:50px; font-weight:900; margin:15px 0;">አሸናፊ፡ ${data.winnerName}</div>
+                    ${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}
+                </div>`;
+                return;
+            }
+
+            if (data.status === "WAITING" || data.status === "IDLE") {
+                let gridHTML = "";
+                for (let i = 1; i <= 80; i++) {
+                    const isTaken = !!(data.takenCards && data.takenCards[i]);
+                    gridHTML += `<button onclick="selectCard(${i}, ${isTaken})" style="width:38px; height:38px; margin:2px; border-radius:8px; border:none; background:${isTaken ? '#444' : '#1f4068'}; color:white; font-weight:bold;">${i}</button>`;
+                }
+                content.innerHTML = `<div style="text-align:center; color:#ffd700;"><h3>ለመጀመር ቁጥር ይምረጡ</h3><h1 style="font-size:3.5rem; margin:10px 0;">⏱ ${data.timer || 30}s</h1></div><div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>`;
+            } 
+            else if (data.status === "PLAYING") {
+                const called = data.calledNumbers || [];
+                if (data.currentNum && data.currentNum !== lastCalledNum) {
+                    lastCalledNum = data.currentNum;
+                    speakBingo(data.currentNum);
+                }
+                if (myFullCard.length > 0 && !data.winner && checkWin(myFullCard, called)) {
+                    db.ref("gameState").update({ winner: userId, winnerName: user.first_name, winnerCard: myFullCard });
+                }
+                content.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div class="num-circle">${data.currentNum || "..."}</div></div>${myFullCard.length > 0 ? renderBingoGrid(myFullCard, called) : `<div style="text-align:center;">ተመልካች ነዎት</div>`}`;
             }
         });
 
-        function renderSelection() {
-            let boxes = "";
-            for (let i = 1; i <= 80; i++) {
-                boxes += `<div class="sel-box" onclick="pickNumber(${i})">${i}</div>`;
-            }
-            document.getElementById("content").innerHTML = `
-                <div style="text-align:center;">
-                    <h2 style="color:#ffd700; margin: 15px 0;">አንድ ቁጥር ይምረጡ</h2>
-                    <div class="selection-grid">${boxes}</div>
-                </div>`;
-        }
-
-        window.pickNumber = function(num) {
-            let cardNums = [num];
-            while(cardNums.length < 24) {
-                let r = Math.floor(Math.random() * 80) + 1;
-                if(!cardNums.includes(r)) cardNums.push(r);
-            }
-            cardNums.sort((a, b) => a - b);
-            cardNums.splice(12, 0, "FREE");
-
-            // እዚህ ጋር በግልጽ chosenNum መያዙን እናረጋግጣለን
-            const playerUpdate = {
-                name: userName,
-                chosenNum: Number(num),
-                card: cardNums,
-                lastUpdated: Date.now()
-            };
-
-            db.ref(`players/${userId}`).set(playerUpdate).then(() => {
-                console.log("ዳታው በትክክል ገብቷል።");
-            });
+        window.selectCard = function(n, taken) {
+            if (taken || myFullCard.length > 0) return;
+            db.ref("gameState").once("value", (s) => { if (!s.val() || s.val().status === "IDLE") startTimer(); });
+            let b=getRange(1,15,5), i=getRange(16,30,5), n_c=getRange(31,45,4), g=getRange(46,60,5), o=getRange(61,75,5);
+            n_c.splice(2,0,"FREE");
+            myFullCard = [...b,...i,...n_c,...g,...o];
+            db.ref(`players/${userId}`).set({ name: user.first_name, card: myFullCard });
+            db.ref(`gameState/takenCards/${n}`).set(true);
         };
 
-        function renderGame(gameState, card, chosenNum) {
-            const called = gameState.calledNumbers || [];
-            let cells = "";
+        function startTimer() {
+            let t = 30; db.ref("gameState").update({ status: "WAITING", timer: t, winner: null, calledNumbers: [] });
+            const ti = setInterval(() => { t--; db.ref("gameState/timer").set(t); if(t<=0){ clearInterval(ti); db.ref("gameState/status").set("PLAYING"); callNums(); } }, 1000);
+        }
 
-            card.forEach(val => {
-                let isHit = called.includes(val) || val === "FREE";
-                let isChosen = (Number(val) === Number(chosenNum));
-                let bgColor = isHit ? '#e94560' : (isChosen ? '#ffd700' : '#1f4068');
-                let textColor = (isChosen && !isHit) ? '#1a1a2e' : 'white';
-                cells += `<div class="cell" style="background:${bgColor}; color:${textColor}; border:${isChosen ? '2px solid white' : 'none'};">${val}</div>`;
-            });
+        function callNums() {
+            let p = Array.from({length:75}, (_,i)=>i+1); let c = [];
+            const gi = setInterval(() => {
+                db.ref("gameState/winner").once("value", (s) => {
+                    if(s.exists() || p.length===0){ clearInterval(gi); return; }
+                    let n=p.splice(Math.floor(Math.random()*p.length),1)[0];
+                    let l=(n<=15)?"B":(n<=30)?"I":(n<=45)?"N":(n<=60)?"G":"O";
+                    c.push(n); db.ref("gameState").update({ currentNum: l+"-"+n, calledNumbers: c });
+                });
+            }, 4000);
+        }
 
-            document.getElementById("content").innerHTML = `
-                <div style="text-align:center;">
-                    <div class="num-circle">${gameState.currentNum || "..."}</div>
-                    <div class="grid-container">
-                        <div class="bingo-header">
-                            <div class="bingo-letter">B</div><div class="bingo-letter">I</div>
-                            <div class="bingo-letter">N</div><div class="bingo-letter">G</div>
-                            <div class="bingo-letter">O</div>
-                        </div>
-                        <div class="grid-cells">${cells}</div>
-                    </div>
-                    <h3 style="margin-top:20px;">የመረጡት ቁጥር: <span style="color:#ffd700; font-size:1.8rem;">${chosenNum}</span></h3>
-                </div>`;
+        function renderBingoGrid(card, called) {
+            let html = "";
+            for(let r=0; r<5; r++){ for(let c=0; c<5; c++){
+                let n=card[c*5+r]; let hit=called.includes(n) || n==="FREE";
+                html += `<div style="background:${hit?'#e94560':'#1f4068'}; color:white; height:42px; display:flex; justify-content:center; align-items:center; font-weight:bold; border-radius:8px;">${n}</div>`;
+            }}
+            return `<div style="background:white; padding:10px; border-radius:15px; display:grid; grid-template-columns:repeat(5, 1fr); gap:5px; width:260px; margin:auto;">${html}</div>`;
+        }
+
+        function checkWin(card, called) {
+            const p = [[0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], [0,5,10,15,20], [1,6,11,16,21], [2,7,12,17,22], [3,8,13,18,23], [4,9,14,19,24], [0,6,12,18,24], [4,8,12,16,20]];
+            return p.some(a => a.every(i => called.includes(card[i]) || card[i] === "FREE"));
+        }
+
+        function getRange(min, max, count) {
+            let a=[]; while(a.length<count){ let r=Math.floor(Math.random()*(max-min+1))+min; if(!a.includes(r)) a.push(r); }
+            return a.sort((x,y)=>x-y);
         }
     </script>
 </body>
