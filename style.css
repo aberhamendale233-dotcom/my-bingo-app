@@ -1,90 +1,86 @@
 :root {
-    --bg-color: #0b0b1a;
-    --card-bg: #1a1a2e;
-    --primary-color: #ffcc00;
-    --secondary-color: #00d28a;
-    --text-white: #ffffff;
-    --nav-bg: #12122b;
+    --main-bg: #0d0d21;
+    --card-bg: #16162d;
+    --gold: #ffcc00;
+    --neon-green: #00e676;
+    --text-muted: #a0a0b8;
 }
 
 body {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background-color: var(--bg-color);
-    color: var(--text-white);
+    background-color: var(--main-bg);
+    color: white;
+    font-family: 'Arial', sans-serif;
     display: flex;
     justify-content: center;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .app-container {
     width: 100%;
-    max-width: 450px;
-    height: 100vh;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
-    position: relative;
 }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 20px;
-    align-items: center;
-}
-
-.logo { font-size: 1.5rem; font-weight: bold; }
-
+header { padding: 15px; display: flex; justify-content: flex-end; }
 .rules-btn {
-    background: #333;
+    background: #252545;
     color: white;
     border: none;
-    padding: 8px 20px;
-    border-radius: 20px;
-    cursor: pointer;
+    padding: 6px 18px;
+    border-radius: 15px;
+    font-size: 0.8rem;
 }
 
-.main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 50px;
+.welcome-section { text-align: center; margin-top: 20px; }
+.welcome-text { font-size: 1.1rem; color: white; margin-bottom: 5px; }
+.main-logo { 
+    font-size: 3.2rem; 
+    color: var(--gold); 
+    margin: 0; 
+    font-weight: 900;
+    text-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
 }
-
-.welcome-text { text-align: center; margin-bottom: 30px; }
-.welcome-text p { font-size: 1.2rem; margin: 0; }
-.title { font-size: 3rem; color: var(--primary-color); margin: 0; }
 
 .stake-card {
     background: var(--card-bg);
-    width: 85%;
-    padding: 30px 20px;
-    border-radius: 30px;
+    margin: 40px 25px;
+    padding: 40px 20px;
+    border-radius: 25px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid #2a2a4a;
 }
 
+.stake-title { color: white; letter-spacing: 1px; font-size: 0.9rem; }
+
 .play-button {
-    background: var(--secondary-color);
+    background: var(--neon-green);
     color: #000;
     border: none;
     width: 100%;
-    padding: 15px;
-    font-size: 1.5rem;
+    padding: 18px;
+    font-size: 1.6rem;
     font-weight: bold;
-    border-radius: 15px;
-    margin: 20px 0;
-    cursor: pointer;
+    border-radius: 12px;
+    margin: 25px 0;
+    box-shadow: 0 5px 15px rgba(0, 230, 118, 0.3);
 }
+
+.wallet-label { color: white; font-size: 0.9rem; margin-bottom: 10px; }
+.balance-amount { font-size: 2.5rem; margin: 0; font-weight: bold; }
 
 .bottom-nav {
-    background: var(--nav-bg);
+    margin-top: auto;
+    background: #09091a;
     display: flex;
     justify-content: space-around;
-    padding: 15px 0;
-    border-top: 1px solid #222;
+    padding: 12px 5px;
+    border-top: 1px solid #1a1a3a;
 }
 
-.nav-item { text-align: center; font-size: 0.7rem; color: #888; }
-.nav-item.active { color: var(--secondary-color); }
-.nav-item .icon { font-size: 1.2rem; margin-bottom: 5px; }
+.nav-item { text-align: center; color: #666680; }
+.nav-item.active { color: var(--neon-green); }
+.nav-icon { display: block; font-size: 1.3rem; margin-bottom: 4px; }
+.nav-text { font-size: 0.65rem; font-weight: bold; }
