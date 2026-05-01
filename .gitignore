@@ -1,31 +1,89 @@
-# Built things
-_Debug/
-Compiled/
 
-# AudioCache can be rebuilt from sources
-AudioCache/
+# ================= NODE =================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Lockfile
-_OpenInEditor.lock
+# ================= BUILD OUTPUT =================
+dist/
+build/
+out/
+coverage/
+.next/
 
-# User settings
-Game.agf.user
-*.crm.user
+# ================= ENV / SECRETS (VERY IMPORTANT) =================
+.env
+.env.*
+!.env.example
 
-# Backups
-Game.agf.bak
-backup_acsprset.spr
+# ================= FIREBASE =================
+.firebase/
+firestore-debug.log
+firebase-debug.log
 
-# Memory dumps
-*.dmp
+# ================= LOG FILES =================
+logs/
+*.log
 
-# Temporary files
-# temporarily created during sprite or room background compression
-~aclzw.tmp
-# temporary, main game data, before getting packed into exe
-game28.dta
-# temporary build of the game before being moved to Compiled/ folder
+# ================= OS FILES =================
+.DS_Store
+Thumbs.db
+
+# ================= IDE / EDITORS =================
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ================= TEMP FILES =================
+tmp/
+temp/
+*.tmp
+
+# ================= BACKUPS =================
+*.bak
+*.backup
+*.old
+*.swp
+
+# ================= DEPLOY PLATFORMS =================
+.vercel/
+.netlify/
+.aws-sam/
+serverless/
+
+# ================= DATABASE FILES =================
+*.sqlite
+*.db
+
+# ================= CACHE =================
+.cache/
+.parcel-cache/
+.eslintcache/
+
+# ================= SECURITY FILES =================
+config.json
+secrets.json
+serviceAccount.json
+private.key
+
+# ================= TELEGRAM / SESSION =================
+*.session
+*.session-journal
+
+# ================= PAYMENT / SENSITIVE =================
+payment-config.json
+telebirr.json
+chapa.json
+
+# ================= COMPILATION =================
 *.exe
+*.dll
+*.class
+*.o
 
-# Log files
-warnings.log
+# ================= TEST REPORTS =================
+test-results/
+coverage-report/
