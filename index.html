@@ -3,19 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Win Bingo - Amharic Spelling Voice</title>
+    <title>Win Bingo - Mute/Unmute Support</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { background-color: #1a1a2e; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        #game-root { width: 100%; max-width: 450px; }
+        #game-root { width: 100%; max-width: 450px; position: relative; }
         .num-circle { background: #ffd700; color: #1a1a2e; width: 100px; height: 100px; border-radius: 50%; display: flex; justify-content: center; align-items:center; font-size: 2.2rem; font-weight: 900; margin: 0 auto; border: 5px solid #fff; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        /* የድምጽ ማጥፊያ ምልክት ስታይል */
+        #mute-btn { position: absolute; top: 0; right: 0; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; z-index: 100; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <div id="game-root"><div style="text-align:center; margin-top:50px;">በመጫን ላይ...</div></div>
+    <div id="game-root">
+        <!-- ድምጽ መቆጣጠሪያ ቁልፍ -->
+        <button id="mute-btn" onclick="toggleMute()">🔊</button>
+        <div id="content"><div style="text-align:center; margin-top:50px;">በመጫን ላይ...</div></div>
+    </div>
 
     <script>
         const firebaseConfig = {
@@ -37,6 +43,15 @@
         const userId = user.id;
         let myFullCard = []; 
         let lastCalledNum = ""; 
+        let isMuted = false; // ድምጹ መጀመሪያ ክፍት ነው
+
+        // ድምጽ ማጥፊያና ማብራያ ተግባር
+        window.toggleMute = function() {
+            isMuted = !isMuted;
+            const btn = document.getElementById("mute-btn");
+            btn.innerText = isMuted ? "🔇" : "🔊";
+            btn.style.background = isMuted ? "rgba(255,0,0,0.2)" : "rgba(255,255,255,0.1)";
+        };
 
         db.ref(`players/${userId}`).on("value", (snapshot) => {
             myFullCard = snapshot.exists() ? snapshot.val().card : [];
@@ -52,17 +67,19 @@
             61:"ስድሳ አንድ", 62:"ስድሳ ሁለት", 63:"ስድሳ ሦስት", 64:"ስድሳ አራት", 65:"ስድሳ አምስት", 66:"ስድሳ ስድስት", 67:"ስድሳ ሰባት", 68:"ስድሳ ስምንት", 69:"ስድሳ ዘጠኝ", 70:"ሰባ",
             71:"ሰባ አንድ", 72:"ሰባ ሁለት", 73:"ሰባ ሦስት", 74:"ሰባ አራት", 75:"ሰባ አምስት"
         };
-
         const amharicLetters = { "B":"ቢ", "I":"አይ", "N":"ኤን", "G":"ጂ", "O":"ኦ" };
 
         function speakBingo(text) {
+            // ድምጹ ጠፍቶ ከሆነ (Muted) ምንም አያሰማም
+            if (isMuted) return;
+
             if ('speechSynthesis' in window) {
                 const parts = text.split("-");
                 const letterName = amharicLetters[parts[0]] || parts[0];
                 const numberName = amharicNumbers[parseInt(parts[1])] || parts[1];
                 
                 const msg = new SpeechSynthesisUtterance();
-                msg.text = `${letterName}... ${numberName}`; // በመሃል ትንሽ ፋታ እንዲሰጥ
+                msg.text = `${letterName}... ${numberName}`;
                 msg.lang = 'am-ET'; 
                 msg.rate = 0.85; 
                 window.speechSynthesis.speak(msg);
@@ -71,11 +88,11 @@
 
         db.ref("gameState").on("value", (snapshot) => {
             const data = snapshot.val() || { status: "IDLE" };
-            const root = document.getElementById("game-root");
-            if (!root) return;
+            const content = document.getElementById("content");
+            if (!content) return;
             
             if (data.winner) {
-                root.innerHTML = `<div style="text-align:center; background:#16213e; padding:30px; border-radius:30px; border:3px solid #ffd700;">
+                content.innerHTML = `<div style="text-align:center; background:#16213e; padding:30px; border-radius:30px; border:3px solid #ffd700;">
                     <h1 style="color:#ffd700; margin:0;">🎊 BINGO! 🎊</h1>
                     <div style="background:#ffd700; color:#1a1a2e; padding:12px; border-radius:50px; font-weight:900; margin:20px 0;">${data.winnerName}</div>
                     <div style="transform: scale(0.8);">${renderBingoGrid(data.winnerCard, data.calledNumbers || [])}</div>
@@ -92,7 +109,7 @@
                     const isTaken = !!(data.takenCards && data.takenCards[i]);
                     gridHTML += `<button onclick="selectCard(${i}, ${isTaken})" style="width:38px; height:38px; margin:2px; border-radius:8px; border:none; background:${isTaken ? '#444' : '#1f4068'}; color:white; font-weight:bold; cursor:pointer;">${i}</button>`;
                 }
-                root.innerHTML = `<div style="text-align:center; color:#ffd700;"><h3>${data.status === "IDLE" ? "ለመጀመር ቁጥር ይምረጡ" : "ጨዋታው ሊጀምር ነው..."}</h3><h1 style="font-size:3.5rem; margin:10px 0;">⏱ ${data.timer || 30}s</h1></div><div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>`;
+                content.innerHTML = `<div style="text-align:center; color:#ffd700;"><h3>${data.status === "IDLE" ? "ለመጀመር ቁጥር ይምረጡ" : "ጨዋታው ሊጀምር ነው..."}</h3><h1 style="font-size:3.5rem; margin:10px 0;">⏱ ${data.timer || 30}s</h1></div><div style="display:flex; flex-wrap:wrap; justify-content:center;">${gridHTML}</div>`;
             } 
             else if (data.status === "PLAYING") {
                 const calledNumbers = data.calledNumbers || [];
@@ -109,7 +126,7 @@
                     return `<div style="background:rgba(255,255,255,0.15); width:45px; height:45px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:0.8rem; font-weight:bold; margin:0 5px; border:1px solid rgba(255,255,255,0.2);">${l}-${n}</div>`;
                 }).join('');
 
-                root.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div class="num-circle">${data.currentNum || "..."}</div><div style="display:flex; justify-content:center; margin-top:15px; min-height:45px;">${historyHTML}</div></div>${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:#888;">ተመልካች ነዎት</div>`}`;
+                content.innerHTML = `<div style="text-align:center; margin-bottom:20px;"><div class="num-circle">${data.currentNum || "..."}</div><div style="display:flex; justify-content:center; margin-top:15px; min-height:45px;">${historyHTML}</div></div>${myFullCard.length > 0 ? renderBingoGrid(myFullCard, calledNumbers) : `<div style="text-align:center; color:#888;">ተመልካች ነዎት</div>`}`;
             }
         });
 
