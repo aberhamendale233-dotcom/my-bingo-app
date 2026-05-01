@@ -1,6 +1,6 @@
 const firebase = require("firebase-admin");
 
-// 🔥 Firebase setup (add your serviceAccount.json)
+// 🔥 INIT FIREBASE
 firebase.initializeApp({
     credential: firebase.credential.applicationDefault(),
     databaseURL: "https://YOUR_PROJECT.firebaseio.com"
@@ -8,14 +8,14 @@ firebase.initializeApp({
 
 const db = firebase.database();
 
-// ================= GAME STATE =================
+// ================= GAME CONFIG =================
 let pool = [];
-let calledNumbers = [];
+let called = [];
 let players = {};
+let selectionOpen = false;
 let gameRunning = false;
-let currentRoom = "room1";
 
-// ================= INIT =================
+// ================= INIT NUMBERS (1–75) =================
 function initPool() {
     pool = Array.from({ length: 75 }, (_, i) => i + 1);
     shuffle(pool);
@@ -28,43 +28,99 @@ function shuffle(arr) {
     }
 }
 
-// ================= GAME START =================
-function startGame() {
-    console.log("🎰 Game Starting...");
-    gameRunning = true;
-
+// ================= START SELECTION =================
+function startSelection() {
+    selectionOpen = true;
+    gameRunning = false;
     initPool();
-    calledNumbers = [];
+    called = [];
 
     db.ref("gameState").set({
-        status: "PLAYING",
-        calledNumbers: [],
-        currentNumber: null,
-        winner: null
+        status: "WAITING",
+        timer: 30,
+        calledNumbers: []
+    });
+
+    let t = 30;
+
+    const interval = setInterval(() => {
+        t--;
+
+        db.ref("gameState/timer").set(t);
+
+        if (t <= 0) {
+            clearInterval(interval);
+            selectionOpen = false;
+            startGame();
+        }
+    }, 1000);
+}
+
+// ================= PLAYER JOIN (1–5 CARDS ALLOWED) =================
+function joinPlayer(userId, cardsCount = 1) {
+    if (!selectionOpen) return "❌ Closed";
+
+    if (players[userId]) return "❌ Already joined";
+
+    if (cardsCount < 1 || cardsCount > 5) {
+        return "❌ Invalid card count (1–5 only)";
+    }
+
+    let cards = [];
+
+    for (let i = 0; i < cardsCount; i++) {
+        cards.push(generateCard());
+    }
+
+    players[userId] = cards;
+
+    db.ref("players/" + userId).set({
+        cards
+    });
+
+    return "✅ Joined";
+}
+
+// ================= CARD GENERATION =================
+function generateCard() {
+    let card = [];
+
+    for (let i = 0; i < 25; i++) {
+        card.push(Math.floor(Math.random() * 75) + 1);
+    }
+
+    card[12] = "FREE";
+    return card;
+}
+
+// ================= START GAME =================
+function startGame() {
+    gameRunning = true;
+
+    db.ref("gameState").update({
+        status: "PLAYING"
     });
 
     gameLoop();
 }
 
-// ================= NUMBER CALL LOOP =================
+// ================= GAME LOOP =================
 function gameLoop() {
     const interval = setInterval(() => {
+
         if (!gameRunning || pool.length === 0) {
             clearInterval(interval);
             return;
         }
 
-        const num = pool.pop();
-        const letter = getLetter(num);
-        const full = `${letter}-${num}`;
+        const num = drawNumber();
+        const label = getLabel(num);
 
-        calledNumbers.push(num);
-
-        console.log("📢 Called:", full);
+        called.push(num);
 
         db.ref("gameState").update({
-            currentNumber: full,
-            calledNumbers: calledNumbers
+            currentNumber: `${label}-${num}`,
+            calledNumbers: called
         });
 
         checkWinner();
@@ -72,8 +128,14 @@ function gameLoop() {
     }, 3000);
 }
 
-// ================= LETTER SYSTEM =================
-function getLetter(n) {
+// ================= DRAW NUMBER =================
+function drawNumber() {
+    let i = Math.floor(Math.random() * pool.length);
+    return pool.splice(i, 1)[0];
+}
+
+// ================= LETTER =================
+function getLabel(n) {
     if (n <= 15) return "B";
     if (n <= 30) return "I";
     if (n <= 45) return "N";
@@ -81,72 +143,56 @@ function getLetter(n) {
     return "O";
 }
 
-// ================= PLAYER JOIN =================
-function addPlayer(userId, card) {
-    players[userId] = card;
-
-    db.ref("players/" + userId).set({
-        card,
-        joinedAt: Date.now()
-    });
-
-    console.log("👤 Player joined:", userId);
-}
-
 // ================= WIN CHECK =================
 function checkWinner() {
     for (let userId in players) {
-        const card = players[userId];
+        let cards = players[userId];
 
-        if (isWinner(card)) {
-            console.log("🏆 WINNER:", userId);
+        for (let card of cards) {
+            if (isWin(card)) {
+                console.log("🏆 WINNER:", userId);
 
-            gameRunning = false;
+                gameRunning = false;
 
-            db.ref("gameState").update({
-                winner: userId,
-                status: "FINISHED"
-            });
+                db.ref("gameState").update({
+                    winner: userId,
+                    status: "FINISHED"
+                });
 
-            return;
+                return;
+            }
         }
     }
 }
 
-// ================= WIN LOGIC =================
-function isWinner(card) {
-    return card.every(num =>
-        calledNumbers.includes(num) || num === "FREE"
+// ================= WIN RULE =================
+function isWin(card) {
+    return card.every(n =>
+        n === "FREE" || called.includes(n)
     );
 }
 
-// ================= RESET GAME =================
+// ================= RESET =================
 function resetGame() {
+    selectionOpen = false;
     gameRunning = false;
     pool = [];
-    calledNumbers = [];
+    called = [];
     players = {};
 
     db.ref("gameState").set({
         status: "IDLE",
-        calledNumbers: [],
         currentNumber: null,
+        calledNumbers: [],
         winner: null
     });
 
     db.ref("players").remove();
-
-    console.log("🔄 Game Reset");
 }
 
-// ================= EXPORT (OPTIONAL API USE) =================
+// ================= EXPORT =================
 module.exports = {
-    startGame,
-    addPlayer,
+    startSelection,
+    joinPlayer,
     resetGame
 };
-
-// ================= AUTO START =================
-setTimeout(() => {
-    startGame();
-}, 3000);
